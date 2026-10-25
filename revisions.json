@@ -1,0 +1,6 @@
+{
+  "upstream_url": "https://github.com/OpenMOSS/MOSS-Image.git",
+  "upstream_revision": "52b87fca23acedc399d062d593bec388aee9926a",
+  "model_id": "OpenMOSS-Team/MOSS-Image-SFT",
+  "model_revision": "f972bd4b4b9e3852133cc5da954d87bc32cd8fb9"
+}

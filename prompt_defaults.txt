@@ -1,0 +1,5 @@
+[prompt_prefix]
+A detailed anime illustration of an adult traveler wearing a green cloak, standing on a stone bridge above a quiet forest stream. Soft morning sunlight filters through the leaves. Moss-covered rocks, clear water, delicate line art, rich natural colors, peaceful atmosphere.
+
+[negative_prompt]
+worst quality, bad anatomy, watermark, jpeg artifact
