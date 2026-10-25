@@ -1,0 +1,15 @@
+{
+  "comfy_url": "https://github.com/Comfy-Org/ComfyUI.git",
+  "comfy_revision": "19ae172bff6c9e4c738e7f2e00fe087f5b5b46ab",
+  "model_id": "Comfy-Org/MOSS-Image",
+  "model_revision": "24147db865fcdc207270f844777587223fed8d6e",
+  "model_files": [
+    "diffusion_models/moss_image_base_bf16.safetensors",
+    "text_encoders/qwen3.5_9b_bf16.safetensors",
+    "vae/flux2-vae_small.safetensors"
+  ],
+  "lora_id": "uwgm/Moss",
+  "lora_file": "mossimage_lora_marian_queen2.safetensors",
+  "workflow_file": "moss_marian_queen2.json"
+}
+

@@ -1,96 +1,93 @@
-# MOSS-Image on RunPod
+# MOSS-Image + LoRA on RunPod
 
-MOSS-Image-SFTをRunPodで使うための起動キットです。公式Gradio画面でプロンプトを入力して生成します。
+このrepoを起動すると、MOSS対応版ComfyUI・MOSS-Image Base・マリアン：クイーンLoRA・生成ワークフローをまとめて準備します。追加のComfyUIテンプレートは不要です。
 
 ## 1. Podを用意
 
-- NVIDIA GPUを1枚。24GB級ではCPUオフロード、48GB級ではGPU常駐が初期設定です。
-- RAMは64GB以上、`/workspace` のVolume Diskは80GB以上を目安にしてください。
-- PyTorch **2.9以上**、CUDA対応のRunPod PyTorchイメージを使用してください。
-  - RunPod公式ドキュメント掲載例: `runpod/pytorch:1.0.3-cu1281-torch291-ubuntu2404`
-- Expose HTTP Portsに **7860** を追加。JupyterLabを使う場合は **8888** も追加します。
-- GPUは起動時に自動判定します。BF16対応のAmpere以降が対象です。
-
-モデルは約27.2GB（25.4GiB）。初回にRunPodへダウンロードします。GPU種類ごとの速度・最大解像度は未計測です。
+- RunPodのCUDA版 **PyTorch 2.9以上 / Python 3.12** のテンプレートを使用。
+- **HTTP Port 7860** を公開。JupyterLabを使う場合は8888も公開。
+- /workspaceの保存容量は **100GB**、RAMは64GB以上を目安にする。
+- BF16対応GPUを1枚。48GB級が余裕を持たせた目安。ComfyUIがメモリに応じてオフロードします。GPU別の速度・最大解像度は未計測です。
+- LoRAの保存先は非公開のため、Podの環境変数 **HF_TOKEN** に、uwgm/Mossを読めるHugging Faceトークンを設定できます。設定しなくても初回のターミナルで非表示入力できます。
 
 ## 2. 最初の起動
 
-PodのWeb Terminal、JupyterLabのTerminal、またはSSHで次の1行を実行します。
+PodのTerminalで、この1行を実行します。
 
 ```bash
 cd /workspace && git clone https://github.com/grawthings-beep/MossImage.git && cd MossImage && bash start.sh
 ```
 
-依存の確認 → 公式コードの取得 → UIの組み立て確認 → モデルの取得 → Web UI起動の順で進みます。
-初回のダウンロード中は待ってください。中断した場合は下の「再起動」コマンドで取得を再開できます。
+CUDA実演算の確認 → MOSS対応ComfyUIの固定版を取得 → 依存の確認 → LoRAとモデルの取得 → ログイン付きComfyUI起動、の順で進みます。モデルは合計約30GBです。初回はダウンロードに時間がかかります。
 
-最後に表示される `Login user` / `Login password` を使い、RunPodの **Connect → HTTP Service 7860** を開きます。
-この起動方法ではターミナルを開いたまま使います。終了は `Ctrl+C` です。
+最後に表示される **Login user / Login password** を使い、RunPodの **Connect → HTTP Service 7860** を開きます。この起動方法ではターミナルを開いたまま使います。終了はCtrl+Cです。
 
-### 再起動
+すでにこのrepoを取得している場合は、停止してから更新します。
+
+```bash
+cd /workspace/MossImage && git pull --ff-only && bash start.sh
+```
+
+通常の再起動・ダウンロード中断後の再開:
 
 ```bash
 cd /workspace/MossImage && bash start.sh
 ```
 
-### ターミナルを閉じても動かす
+### LoRAをPCからアップロードする場合
 
-初回の起動確認後、`Ctrl+C`で止めてから:
-
-```bash
-cd /workspace/MossImage && nohup bash start.sh > /workspace/moss-image-start.log 2>&1 &
-```
-
-ログの表示は `tail -f /workspace/moss-image-start.log` です。こちらの`Ctrl+C`はログ表示だけを止めます。
-ログイン情報は `/workspace/moss-image-runtime/login.json` に保存されます。
-
-## 3. 画像生成
-
-1. プロンプトを入力（英語の文章が推奨。初期状態にアニメ背景向けの例文があります）。
-2. 最初は **1024×1024、50 steps、CFG 3、Shift 5、1枚** のまま実行。
-3. `Generate`を押します。初回はモデル読み込みにも時間がかかります。
-4. 画像をダウンロードします。画像と生成条件はPodにも自動保存されます。
-
-メモリ不足ならAdvanced settingsのMemory modeを `Component`、さらに不足するなら `Sequential` に変更し、解像度を下げてください。Sequentialは遅くなります。Compileは初期状態でオフです。
-
-例:
+トークンを使わず、保存済みのファイルを次の場所に置いても使えます。
 
 ```text
-A detailed anime illustration of an adult traveler wearing a green cloak, standing on a stone bridge above a quiet forest stream. Soft morning sunlight filters through the leaves. Moss-covered rocks, clear water, delicate line art, rich natural colors, peaceful atmosphere.
+/workspace/moss-image-runtime/ComfyUI/models/loras/mossimage_lora_marian_queen2.safetensors
 ```
 
-必要ならNegative promptに `worst quality, bad anatomy, watermark, jpeg artifact` を使えます。
-テキスト描画や配置指定は公式の[ユーザーガイド](https://github.com/OpenMOSS/MOSS-Image/blob/main/USERGUIDE.md)を参照してください。
+配置後、start.shを実行してください。完全なファイルがあれば再取得しません。学習画像・LoRA本体・トークンはこのGitHubリポジトリに含めていません。
 
-## 保存先と確認
+## 3. 生成する
 
-| 内容 | Pod内の場所 |
+1. 左側の **Workflows** から **moss_marian_queen2** を開く。
+2. 初期プロンプトは「白いセーター＋ジーンズ、公園」。**Run** を押す。
+3. 着せ替えるときは「ここで衣装・背景を変更」の文章を編集。トリガー **m4r14nqu33n2** は残す。
+4. 生成画像は画面から保存でき、Podにも自動保存される。
+
+ワークフローが一覧に出ない場合は、[同梱JSON](workflows/moss_marian_queen2.json)をダウンロードして画面へドラッグします。
+
+初期値は学習と同じ **MOSS-Image Base（BF16）**、テキストエンコーダーBF16、LoRA強度1.0、832×1248、50 steps、CFG 3、Euler / sgm_uniform、shift 5、SLG layer 22です。seedは比較用に42で固定しています。別構図を出すときはseedを変更するかrandomizeにします。
+
+これらは初期値です。顔・衣装の再現品質を保証するものではなく、実際の生成結果で確認します。
+
+## 保存先
+
+| 内容 | 場所 |
 |---|---|
-| 生成PNGとparameters.json | `/workspace/moss-image-runtime/generated/` |
-| 公式モデル | `/workspace/moss-image-runtime/models/MOSS-Image-SFT/` |
-| セットアップログ | `/workspace/moss-image-runtime/logs/setup.log` |
-| UIログ（ログイン情報を含む） | `/workspace/moss-image-runtime/logs/ui.log` |
-| ログイン情報 | `/workspace/moss-image-runtime/login.json` |
-| 実際に使用したライブラリ一覧 | `/workspace/moss-image-runtime/installed-packages.txt` |
+| ComfyUIとモデル | /workspace/moss-image-runtime/ComfyUI/ |
+| 生成画像 | /workspace/moss-image-runtime/ComfyUI/output/MOSS/ |
+| ワークフロー | /workspace/moss-image-runtime/ComfyUI/user/default/workflows/ |
+| ログイン情報 | /workspace/moss-image-runtime/login.json |
+| セットアップログ | /workspace/moss-image-runtime/logs/comfy-setup.log |
+| UIログ | /workspace/moss-image-runtime/logs/comfy-ui.log |
 
-Podのストレージを削除する前に必要な画像を保存してください。作業後はRunPodでPodをStopしてください。
-
-UIを起動する代わりに、1024px・50 stepsの1枚を保存して終了する動作確認:
+初回の起動確認後、ターミナルを閉じても動かす場合:
 
 ```bash
-cd /workspace/MossImage && bash start.sh --smoke
+cd /workspace/MossImage
+nohup bash start.sh > /workspace/moss-image-start.log 2>&1 &
 ```
 
-## 実装と検証範囲
+ログ表示は `tail -f /workspace/moss-image-start.log`。作業後はPodをStopします。必要な画像はストレージ削除前に保存してください。
 
-- 公式コードとモデルは `revisions.json` のリビジョンに固定しています。
-- PodのCUDA版PyTorchを使い、専用venvに依存を追加します。PyTorch / torchvision / torchaudio / Triton / NVIDIA依存の既存バージョンを制約ファイルで保護します。
-- PyTorchが古い場合は止めます。別用途のSDXL/Anima学習環境にはインストールせず、MOSS専用Podを使ってください。
-- 起動前にCUDA BF16演算、実インポート、UI構築を検査します。
-- ローカル検証の結果は `VALIDATION.md` を参照。**RunPod GPUでのモデル読込・画像生成は未検証です。**
-- 保存先変更: `MOSS_HOME=/workspace/別フォルダ bash start.sh`
-- 初期Memory modeの指定: `bash start.sh --profile 24gb` / `--profile 48gb`
+## 実装と検証
 
-このリポジトリはOpenMOSS公式リポジトリではありません。公式モデルとコードを取得して起動する補助キットです。
+- `comfy-revisions.json` でMOSS対応ComfyUIと公開モデルのリビジョンを固定。
+- 専用venvを使い、既存のCUDA PyTorch / torchvision / torchaudio / Triton / NVIDIA依存を制約ファイルで保護。
+- 起動前にCUDA BF16演算と実際のMOSSノードを確認。カスタムノード追加は不要。
+- ComfyUI本体は内部ポートで起動し、7860を同じログインで保護。生成進捗・プレビューのWebSocketも中継。
+- 再起動時、利用者が編集した保存済みワークフローは上書きしない。
+- ポート変更: `bash start.sh --port 8188`。保存先変更: `MOSS_HOME=/workspace/別フォルダ bash start.sh`。
+- 従来の公式Gradio版（SFT単体）は `bash start-gradio.sh` で起動可能。LoRA生成は既定のComfyUI版を使用。
+- 検証結果は [VALIDATION.md](VALIDATION.md)。**RunPodのGPUでの実画像生成は未検証です。**
 
-参考: [OpenMOSS/MOSS-Image](https://github.com/OpenMOSS/MOSS-Image)、[公式モデル](https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT)、[RunPodの接続方法](https://docs.runpod.io/pods/connect-to-a-pod)、[RunPod公式イメージ例](https://docs.runpod.io/runpodctl/reference/runpodctl-pod)。
+このrepoは、公式コードとモデルを取得する起動キットです。
+
+参照: [ComfyUI](https://github.com/Comfy-Org/ComfyUI)、[MOSSモデル](https://huggingface.co/Comfy-Org/MOSS-Image)、[OpenMOSS](https://github.com/OpenMOSS/MOSS-Image)。

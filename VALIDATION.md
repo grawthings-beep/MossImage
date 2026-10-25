@@ -1,37 +1,33 @@
-# 検証記録
+# ComfyUI版の検証記録
 
 検証日: 2026-10-25（日本時間）。
 
 ## 確認済み
 
-- Pythonファイルの構文解析。
-- `setup.sh` / `start.sh` の `bash -n` 構文確認。
-- 独立したWindows / Python 3.12.12環境で依存をインストール。
-- 公式モデル `pipeline_moss_image.py`、Qwen3.5、FLUX.2 VAE等の実インポート。
-- 固定した公式コードのGradio UIを、同梱例と独自の初期プロンプトを使って構築。
-- モデルID、モデルリビジョン、ファイル構成、約27.2GBのサイズをHugging Faceの公開メタデータで確認。
+- 固定したComfyUI: 19ae172bff6c9e4c738e7f2e00fe087f5b5b46ab（起動時バージョン表示0.42.0）。
+- 公開モデル: Comfy-Org/MOSS-Image、revision 24147db865fcdc207270f844777587223fed8d6e。Base BF16・Qwen3.5-9B BF16・flux2-vae_smallの存在を確認。
+- Python構文解析、起動スクリプト4本のBash構文、git diff --check。
+- 実際のComfyUIでMOSSのCLIPLoader・UNETLoader・VAE・SLG・Flux2 latent等をインポート。
+- 同梱ワークフローをComfyUI実装のprompt validatorが受理。モデル名の照合には検証専用の空ファイルを使用し、重み実行はしていない。
+- 利用者の保存済みLoRAの全252アダプター / 756テンソルが、ネイティブMOSSモデルのキーと形状に一致。モデルはmeta deviceで構築し、大型の本体重みは読み込んでいない。
+- 新しいlaunch_comfy.pyから実際のComfyUIをCPUモードで起動。未認証401、認証後のフロントエンドとAPI、MOSS対応のobject_info、保存済みワークフロー一覧、WebSocket status、子プロセス終了を確認。
+- 自動テスト5件: HTTP/WS認証、APIリクエスト・プレビュー転送、途中ダウンロードの拒否、既存のログイン情報とワークフロー編集の保持。
 
-検証に使った主要バージョン:
+ローカル検証環境: Windows、Python 3.12.12、PyTorch 2.9.1+cpu、ComfyUI frontend 1.57.1、aiohttp 3.14.5、huggingface_hub 1.33.0。これはCPUでの配線・起動検証であり、GPU生成品質の検証ではない。
 
-| ライブラリ | バージョン |
-|---|---|
-| PyTorch（ローカル検証のみCPU版） | 2.9.1+cpu |
-| Diffusers | 0.38.0 |
-| Transformers | 5.3.0 |
-| Accelerate | 1.10.1 |
-| safetensors | 0.8.0 |
-| Gradio | 6.30.0 |
-| huggingface_hub | 1.33.0 |
-| tokenizers | 0.22.2 |
-| Pillow | 12.3.0 |
+自動テストの再実行（ComfyUIの依存が入ったPythonで）:
 
-Diffusers 0.38.0はsafetensors >=0.8.0rc0を必要とするため、安定版0.8.0に固定しました。
-日本語Windowsで公式サンプルJSONを読む際の文字コード問題を避けるため、起動スクリプトは `PYTHONUTF8=1` を設定します。
+```bash
+python -m unittest discover -s tests -v
+```
 
 ## 未確認
 
-- RunPod/Linuxでのセットアップ全体、CUDA演算とGPUへのモデル読み込み。
-- モデル全量のダウンロード、実画像生成、速度、ピークVRAM、RunPod HTTPプロキシ経由の接続。
+- RunPod/Linuxでのセットアップ全体、HF_TOKENを使用した利用者の非公開LoRAの取得。
+- 約30GBのモデル全量ダウンロード。
+- CUDA上でのモデル読み込み・画像生成、顔や衣装の再現品質、速度・VRAM。
+- RunPod外部HTTPプロキシ経由のブラウザー接続。
 
-この時点ではPodは未作成です。ローカルではモデル重みをダウンロードしていません。
-RunPodでは起動時にGPU実演算を検査します。初回の画像生成確認には `bash start.sh --smoke` を使えます。
+実Podでは起動時にCUDA BF16演算と実ノードのインポートを検査し、ダウンロード後にファイル構造・サイズを確認する。GPUでの最初の生成は、同梱ワークフローを開いてRunを押して確認する。
+
+旧Gradio版の検証記録は [VALIDATION-gradio.md](VALIDATION-gradio.md)。

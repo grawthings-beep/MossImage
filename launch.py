@@ -38,7 +38,7 @@ def main():
     if not args.check_ui:
         revision_file = model / ".moss-revision"
         if not is_model_bundle(model) or not revision_file.is_file() or revision_file.read_text().strip() != pins["model_revision"]:
-            raise SystemExit("Model bundle incomplete or revision differs. Run setup.sh first.")
+            raise SystemExit("Model bundle incomplete or revision differs. Run setup-gradio.sh first.")
     if args.smoke:
         runner = ModelRunner(output, local_files_only=True)
         config = GenerationConfig(
