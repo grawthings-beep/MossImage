@@ -1,0 +1,18 @@
+{
+  "trainer_repository": "AcademiaSD/AcademiaSD_LoRAlab-TrainerStudio",
+  "trainer_revision": "a5751f9cb051399c4ccf1152ce095c95b8f246f1",
+  "model_repository": "AcademiaSD/MOSS-Image-NF4-for-LoRA-Training",
+  "model_revision": "ae628cc6ea7186ce8d1d4b4c20295a0573be4905",
+  "files": {
+    "LICENSE": "21f327e666a5d13a566cd7ee7773b3f30b0e97cc65cea68487f01f0cd5bef050",
+    "scripts/1_pre_cache_mossimage.py": "983e607f2b501afc9868edcb8d9101992e94145b592aa89687eca269d28c7682",
+    "scripts/2_train_lora_mossimage.py": "38710d51ea970642eb24af9f0bb849709d47f33781c0053ae60b2467fc70afdc",
+    "scripts/gpu_stats.py": "16bb035419dff05ac4e594bde4d3e729d126904a33990fb0a4b90375a4293d91",
+    "scripts/i18n.py": "b3c38f639c162fb16b0a0a6d2ac59fd36aca2500019a7dbbedd21d163e25a532",
+    "scripts/lora_options.py": "6a9e7087e927e23f1a4d5503895393b4b039a3be9fa802c18bccccb1f4195142",
+    "scripts/moss_edit_lora.py": "c0d94e8a735cd5ede6998cee98cbbb979e6459b0bc2fd2e4e20dc424eb34ada1",
+    "scripts/moss_image_model.py": "aac39b081d8df845cbb84c2c800f6347ede8dacdacfc28714a42d572f703e0b2",
+    "scripts/project_layout.py": "849eb6642214e409a9404a7fa708daf72ce80de17e2b0cf300290f0813001c91",
+    "scripts/training_metrics.py": "7f646a807be1a95f50e1bce1abf9bc23d5a647ed69641748fddaefee0eb42190"
+  }
+}

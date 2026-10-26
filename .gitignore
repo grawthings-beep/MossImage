@@ -10,3 +10,7 @@ generated/
 *.safetensors
 comfy-venv/
 ComfyUI/
+training-bundles/
+*.tar.gz
+*_validation.json
+*_send_state.json

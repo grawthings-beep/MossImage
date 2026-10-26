@@ -2,6 +2,8 @@
 
 このrepoを起動すると、MOSS対応版ComfyUI・MOSS-Image Base・マリアン：クイーンLoRA・生成ワークフローをまとめて準備します。追加のComfyUIテンプレートは不要です。
 
+**LoRAを作る場合:** [PCから送信してRunPodで自動学習する手順](TRAINING.md)。画像とキャプションをまとめて送り、Podに1行貼ると受信・Pre-Cache・学習・保存までバックグラウンドで進みます。
+
 ## 1. Podを用意
 
 - RunPodのCUDA版 **PyTorch 2.9以上 / Python 3.12** のテンプレートを使用。

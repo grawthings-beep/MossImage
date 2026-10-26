@@ -1,0 +1,13 @@
+# Only MOSS training dependencies. Keep the Pod's CUDA PyTorch stack.
+diffusers @ https://github.com/huggingface/diffusers/archive/537887041938fc6fe61ad583c3ae77477c9ebac9.zip
+transformers==5.20.2
+peft==0.21.2
+accelerate==1.15.0
+bitsandbytes==0.50.2
+safetensors==0.8.0
+huggingface_hub==2.3.0
+Pillow==13.0.0
+numpy==2.5.4
+psutil>=5.9
+sentencepiece
+protobuf
