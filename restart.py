@@ -54,11 +54,15 @@ def main():
     if sys.platform != 'linux':
         raise SystemExit('Run this restart command in the RunPod terminal.')
     import fcntl
+    options = sys.argv[1:]
+    stop_only = options == ['--stop']
+    if '--stop' in options and not stop_only:
+        raise SystemExit('--stop does not accept additional startup options.')
     kit = Path(__file__).resolve().parent
     runtime = Path(os.environ.get('MOSS_HOME', '/workspace/moss-image-runtime')).resolve()
     proc = Path('/proc')
     matching = targets(proc, kit, runtime)
-    print(f'Restarting this MOSS runtime; stopping {len(matching)} generation processes.', flush=True)
+    print(f'Stopping {len(matching)} generation processes for this MOSS runtime.', flush=True)
     terminate(proc, matching, kit, runtime)
     runtime.mkdir(parents=True, exist_ok=True)
     with (runtime / 'runtime.lock').open('a') as lock:
@@ -72,8 +76,11 @@ def main():
                     raise SystemExit('The runtime is still busy (possibly setup or another checkout). No other processes were stopped. Try after setup finishes.')
                 time.sleep(.25)
         fcntl.flock(lock, fcntl.LOCK_UN)
+    if stop_only:
+        print('Generation server stopped. Models and projects remain saved; training can proceed when the GPU is free.', flush=True)
+        return 0
     # Preserve the caller's HF_TOKEN/MOSS_HOME and forward start.sh options.
-    return subprocess.call(['bash', str(kit / 'background.sh'), *sys.argv[1:]])
+    return subprocess.call(['bash', str(kit / 'background.sh'), *options])
 
 
 if __name__ == '__main__':

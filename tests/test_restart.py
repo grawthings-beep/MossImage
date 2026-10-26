@@ -2,13 +2,26 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
+from types import SimpleNamespace
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from restart import owns, targets, terminate
+from restart import owns, targets, terminate, main
 
 
 class RestartTests(unittest.TestCase):
+    def test_stop_releases_runtime_lock_without_starting_generation_again(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fake_fcntl=SimpleNamespace(LOCK_EX=2,LOCK_NB=4,LOCK_UN=8,flock=Mock())
+            with patch('restart.sys.platform','linux'), patch('restart.sys.argv',['restart.py','--stop']), \
+                 patch.dict('os.environ',{'MOSS_HOME':directory}), patch.dict(sys.modules,{'fcntl':fake_fcntl}), \
+                 patch('restart.targets',return_value={}), patch('restart.terminate') as stop, \
+                 patch('restart.subprocess.call') as start:
+                self.assertEqual(main(),0)
+                stop.assert_called_once()
+                start.assert_not_called()
+                self.assertEqual(fake_fcntl.flock.call_args_list[-1].args[1],fake_fcntl.LOCK_UN)
+
     def test_only_this_kit_and_runtime_match(self):
         kit=Path('/kit').resolve(); runtime=Path('/runtime').resolve()
         server=['python','-u',str(kit/'launch_comfy.py'),'--runtime',str(runtime)]

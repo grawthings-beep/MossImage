@@ -23,6 +23,14 @@ cd /workspace && git clone https://github.com/grawthings-beep/MossImage.git
 cd /workspace/MossImage && git pull --ff-only
 ```
 
+同じPodを生成から学習へ切り替える場合、生成が完了してから次を実行します。この保存先を使う生成サーバーだけを停止します。
+
+```bash
+bash /workspace/MossImage/background.sh --stop
+```
+
+学習が終わったら `bash /workspace/MossImage/background.sh` で生成を再開できます。
+
 `start.sh` は画像生成用です。学習だけの場合、起動する必要はありません。学習用環境は最初のジョブで自動準備します。`runpodctl receive` がなければ、x86_64のPodでは固定版2.14.0をSHA256検証付きで取得します。
 
 ## PC側: データセットをまとめて送る
