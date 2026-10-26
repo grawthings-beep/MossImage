@@ -1,10 +1,11 @@
 """Authenticated Manga Studio routes, mounted before the ComfyUI proxy."""
 import asyncio
 import copy
+import hmac
 import io
 import json
 from pathlib import Path
-from urllib.parse import urlsplit
+import secrets
 import zipfile
 
 from aiohttp import web
@@ -26,15 +27,20 @@ def mount(app, runtime, upstream):
     engine = Engine(runtime, store, upstream)
     key = web.AppKey('studio_engine', Engine)
     app[key] = engine
+    csrf_token = secrets.token_urlsafe(32)
 
     @web.middleware
     async def guard(request, handler):
         if not request.path.startswith('/studio'):
             return await handler(request)
         if request.method not in ('GET', 'HEAD'):
-            origin = request.headers.get('Origin')
-            if request.headers.get('X-Moss-Studio') != '1' or (origin and urlsplit(origin).netloc != request.host):
-                return web.json_response({'error': '同じ画面から操作してください。'}, status=403)
+            # Reverse proxies can rewrite Host and scheme. A token read from our
+            # authenticated bootstrap is independent of that rewriting; another
+            # origin cannot read it because Studio does not enable CORS.
+            provided = request.headers.get('X-Moss-CSRF', '')
+            if not hmac.compare_digest(provided.encode(), csrf_token.encode()):
+                return web.json_response({'error': '接続情報を更新して、もう一度操作してください。',
+                                          'code': 'csrf_expired'}, status=403)
         try:
             response = await handler(request)
             response.headers['Cache-Control'] = 'no-store'
@@ -101,7 +107,8 @@ def mount(app, runtime, upstream):
         projects = store.list('project')
         if not projects:
             projects = [store.project(validate_project(default_project()))]
-        return web.json_response({'projects': [{'id': p['id'], 'title': p['title'], 'pages': len(p['pages'])} for p in projects],
+        return web.json_response({'csrf_token': csrf_token,
+                                  'projects': [{'id': p['id'], 'title': p['title'], 'pages': len(p['pages'])} for p in projects],
                                   'jobs': [job_summary(j) for j in store.list('job')[:60]]})
 
     async def new_project(request):

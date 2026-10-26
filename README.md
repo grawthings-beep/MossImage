@@ -38,6 +38,12 @@ tail -n 80 -f /workspace/moss-image-runtime/logs/background.log
 cd /workspace/MossImage && git pull --ff-only && bash background.sh
 ```
 
+バックグラウンドで稼働中なら、生成が終わってから次の1行で更新・再起動できます。このキットの同じ保存先を使う生成サーバーだけを停止し、モデル・作品・ログイン情報を保持します。
+
+```bash
+cd /workspace/MossImage && git pull --ff-only && bash background.sh --restart
+```
+
 通常の再起動・ダウンロード中断後の再開:
 
 ```bash

@@ -4,6 +4,10 @@ set -Eeuo pipefail
 umask 077
 KIT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 export MOSS_HOME="${MOSS_HOME:-/workspace/moss-image-runtime}"
+if [[ "${1:-}" == '--restart' ]]; then
+  shift
+  exec python3 "$KIT/restart.py" "$@"
+fi
 mkdir -p "$MOSS_HOME/logs"
 if ! flock -n "$MOSS_HOME/runtime.lock" true; then
   echo 'MOSS is already starting or running. Use the existing HTTP Service 7860.'

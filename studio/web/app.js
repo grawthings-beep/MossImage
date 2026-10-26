@@ -9,25 +9,34 @@ const states = {queued:'待機中', preparing:'準備中', running:'生成中', 
 let project, pageId, projects = [], jobs = [], selected = null, currentTab = 'page';
 let version = 0, savedVersion = 0, saving = null, saveTimer, previewURL, previewRequest = 0, busy = false;
 let jobsSignature = '', pendingRequest = null;
+let csrfToken = '';
 
 function notice(message, good = false) {
   $('notice').hidden = !message;
   $('notice').textContent = message || '';
   $('notice').className = good ? 'success' : '';
 }
-async function api(path, options = {}) {
-  const headers = {'X-Moss-Studio':'1', ...options.headers};
-  if (options.body && !(options.body instanceof Blob)) {
+async function api(path, options = {}, retryCsrf = true) {
+  const headers = {'X-Moss-Studio':'1', 'X-Moss-CSRF':csrfToken, ...options.headers};
+  let body = options.body;
+  if (body && !(body instanceof Blob)) {
     headers['Content-Type'] = 'application/json';
-    options.body = JSON.stringify(options.body);
+    body = JSON.stringify(body);
   }
-  const response = await fetch('/studio/api' + path, {...options, headers});
+  const response = await fetch('/studio/api' + path, {...options, headers, body});
   const data = await response.json().catch(() => ({error:`通信に失敗しました（${response.status}）。`}));
+  if (response.status === 403 && data.code === 'csrf_expired' && retryCsrf) {
+    // The server rejected this before executing it, so one token-refresh retry
+    // is safe even for uploads and generation submissions.
+    await api('/bootstrap', {}, false);
+    return api(path, options, false);
+  }
   if (!response.ok) {
     const error = new Error(data.error || `通信エラー ${response.status}`);
     error.status = response.status;
     throw error;
   }
+  if (path === '/bootstrap' && data.csrf_token) csrfToken = data.csrf_token;
   return data;
 }
 const page = () => project.pages.find(p => p.id === pageId);

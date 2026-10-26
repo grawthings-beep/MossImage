@@ -236,7 +236,8 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
         self.engine.fonts=AsyncMock(return_value=FONT)
         self.client=TestClient(TestServer(app)); await self.client.start_server()
         self.auth=BasicAuth('moss','test')
-        self.headers={'X-Moss-Studio':'1'}
+        bootstrap=await (await self.client.get('/studio/api/bootstrap',auth=self.auth)).json()
+        self.headers={'X-Moss-Studio':'1','X-Moss-CSRF':bootstrap['csrf_token']}
 
     async def asyncTearDown(self):
         await self.client.close(); self.tmp.cleanup()
@@ -245,10 +246,36 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
         for route in ('/studio/','/studio/api/bootstrap','/studio/app.js','/studio/api/assets/anything'):
             self.assertEqual((await self.client.get(route)).status,401)
         self.assertEqual((await self.client.post('/studio/api/projects',auth=self.auth)).status,403)
-        self.assertEqual((await self.client.post('/studio/api/projects',auth=self.auth,headers=self.headers|{'Origin':'https://another.example'})).status,403)
+        self.assertEqual((await self.client.post('/studio/api/projects',auth=self.auth,headers={'X-Moss-Studio':'1','Origin':'https://another.example'})).status,403)
         response=await self.client.get('/studio/api/bootstrap',auth=self.auth)
         self.assertEqual(response.status,200)
         self.assertEqual(len((await response.json())['projects']),1)
+
+    async def test_proxy_rewritten_host_allows_authenticated_editor_token(self):
+        # Browser Origin is public HTTPS; the proxy forwards an internal HTTP Host.
+        headers=self.headers|{'Origin':'https://examplepod-7860.proxy.runpod.net',
+                              'Host':'127.0.0.1:7860'}
+        response=await self.client.post('/studio/api/projects',auth=self.auth,headers=headers)
+        self.assertEqual(response.status,200,await response.text())
+        p=await response.json(); p['title']='RunPodから保存'
+        response=await self.client.put('/studio/api/projects/'+p['id'],auth=self.auth,headers=headers,json=p)
+        self.assertEqual(response.status,200,await response.text())
+        self.assertEqual((await response.json())['title'],'RunPodから保存')
+
+    async def test_forged_proxy_headers_and_old_tokens_do_not_authorize_writes(self):
+        for token in ('','invalid-token'):
+            response=await self.client.post('/studio/api/projects',auth=self.auth,headers={
+                'X-Moss-CSRF':token,'Origin':'https://attacker.example',
+                'Host':'127.0.0.1:7860','X-Forwarded-Host':'attacker.example'})
+            self.assertEqual(response.status,403)
+            self.assertEqual((await response.json())['code'],'csrf_expired')
+        response=await self.client.options('/studio/api/projects',auth=self.auth,headers={
+            'Origin':'https://attacker.example','Access-Control-Request-Method':'POST',
+            'Access-Control-Request-Headers':'X-Moss-CSRF'})
+        self.assertNotIn('Access-Control-Allow-Origin',response.headers)
+        response=await self.client.get('/studio/api/bootstrap',auth=self.auth,headers={'Origin':'https://attacker.example'})
+        self.assertNotIn('Access-Control-Allow-Origin',response.headers)
+        self.assertEqual(len(self.engine.store.list('project')),1)
 
     async def test_chunked_upload_and_revision_conflict(self):
         async def chunks(raw):
