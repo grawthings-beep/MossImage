@@ -10,6 +10,7 @@ import sys
 
 from huggingface_hub import HfApi, hf_hub_download
 from huggingface_hub.errors import HfHubHTTPError
+from characters import CHARACTERS
 
 KIT = Path(__file__).resolve().parent
 
@@ -32,7 +33,7 @@ def valid_weights(path):
 def download_lora(models, pins):
     destination = models / "loras" / pins["lora_file"]
     if valid_weights(destination):
-        print("LoRA: existing local file is complete.")
+        print(f"LoRA: {destination.name} is complete.")
         return
     token = os.environ.get("HF_TOKEN") or None
     try:
@@ -85,6 +86,9 @@ def main():
 
     # Resolve private-file access before downloading the much larger public models.
     download_lora(models, pins)
+    for character in CHARACTERS.values():
+        if character['file'] != pins['lora_file']:
+            download_lora(models, {'lora_id': character['repo'], 'lora_file': character['file']})
     info = HfApi(token=False).model_info(
         pins["model_id"], revision=pins["model_revision"], files_metadata=True,
     )
@@ -108,7 +112,9 @@ def main():
         if not valid_weights(Path(path)):
             raise SystemExit(f"Model download is incomplete: {path}")
     install_workflow(comfy, pins)
-    print("MOSS-Image Base + Marian Queen LoRA are ready.")
+    for character in CHARACTERS.values():
+        install_workflow(comfy, {'workflow_file': character['workflow']})
+    print("MOSS-Image Base + Marian Queen / Scarlet Goddeath LoRAs are ready.")
 
 
 if __name__ == "__main__":

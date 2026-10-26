@@ -37,6 +37,7 @@ async def main():
         root=Path(tmp)
         files=['diffusion_models/moss_image_base_bf16.safetensors','text_encoders/qwen3.5_9b_bf16.safetensors',
                'vae/flux2-vae_small.safetensors','loras/mossimage_lora_marian_queen2.safetensors',
+               'loras/MossImage_scarlet_goddeath.safetensors',
                *[p['destination'] for p in PINS.values()]]
         for file in files:
             path=root/file; path.parent.mkdir(parents=True,exist_ok=True); path.touch()
@@ -44,7 +45,7 @@ async def main():
         folder_paths.set_input_directory(str(root/'input')); (root/'input').mkdir()
         Image.new('RGB',(512,768),'white').save(root/'input/reference.png')
         count=0
-        for route in ('marian','reference','base','sft'):
+        for route in ('marian','scarlet','reference','base','sft'):
             for sampling in ('quality','comfy'):
                 for full in (False,True):
                     project=default_project(); page=project['pages'][0]

@@ -8,6 +8,8 @@ import sys
 
 
 def credentials(path):
+    if os.environ.get('MOSS_PASSWORD'):
+        return {'username': 'moss', 'password': os.environ['MOSS_PASSWORD']}
     if not path.exists():
         value = {"username": "moss", "password": secrets.token_urlsafe(18)}
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)

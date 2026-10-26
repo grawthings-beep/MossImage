@@ -40,7 +40,7 @@ class SchemaTests(unittest.TestCase):
         layout = json.loads(compile_prompt(p, pg))
         b = pixel_box(pg['panels'][0]['box'], pg['width'], pg['height'])
         self.assertEqual(layout['bbox_format'], 'yxyx')
-        self.assertEqual(layout['items'][0]['bbox'], [b[1]-864, b[0]-576, b[3]-864, b[2]-576])
+        self.assertEqual(layout['items'][0]['bbox'], [b[1]-768, b[0]-576, b[3]-768, b[2]-576])
         self.assertEqual(len(layout['items']), 4)
         self.assertNotIn('DO NOT DIFFUSE THIS', json.dumps(layout))
         self.assertIn(p['trigger'], layout['summary']['caption'])
@@ -59,11 +59,18 @@ class SchemaTests(unittest.TestCase):
         pg = default_project()['pages'][0]
         graph, _ = build_graph(pg, 'prompt', 1152, 1728, 42, 'test')
         self.assertEqual([n['inputs']['lora_name'] for n in graph.values() if n['class_type']=='LoraLoaderModelOnly'], ['mossimage_lora_marian_queen2.safetensors'])
+        self.assertEqual([n['inputs']['steps'] for n in graph.values() if n['class_type']=='KSampler'], [25])
+        pg['route'] = 'scarlet'
+        graph, _ = build_graph(pg, 'sc4rl3tg0d', 1152, 1536, 42, 'test')
+        self.assertEqual([n['inputs']['lora_name'] for n in graph.values() if n['class_type']=='LoraLoaderModelOnly'], ['MossImage_scarlet_goddeath.safetensors'])
         pg.update(route='reference', sampling='comfy')
         graph, _ = build_graph(pg, 'prompt', 1152,1728,42,'test','reference.png')
         encoders = [n['inputs'] for n in graph.values() if n['class_type']=='TextEncodeMOSSImageEdit']
         self.assertEqual(len(encoders), 2)
         self.assertEqual(encoders[0]['images.image_0'], encoders[1]['images.image_0'])
+        self.assertEqual([n['inputs']['steps'] for n in graph.values() if n['class_type']=='KSampler'], [25])
+        pg['sampling'] = 'quality'
+        graph, _ = build_graph(pg, 'prompt', 1152,1536,42,'test','reference.png')
         self.assertEqual([n['inputs']['steps'] for n in graph.values() if n['class_type']=='KSampler'], [50])
         graph, _ = build_graph(pg, 'edit', 512,512,42,'test','reference.png',edit=True)
         self.assertEqual(graph['1']['inputs']['unet_name'], 'moss_image_sft_bf16.safetensors')
@@ -184,6 +191,26 @@ class QueueTests(unittest.IsolatedAsyncioTestCase):
         await self.until(lambda:self.store.get('job',job['id'])['state']=='completed')
         self.assertEqual(len(self.fake.submitted),1)
 
+    async def test_reconnect_tolerates_completion_between_history_and_queue_reads(self):
+        job,_ = self.create()
+        await self.until(lambda: len(self.fake.pending)==1)
+        await self.engine.close()
+        self.engine = self.make_engine()
+        original_api = self.engine.api
+        raced = False
+        async def api_with_completion(method, path, **kwargs):
+            nonlocal raced
+            result = await original_api(method, path, **kwargs)
+            if path.startswith('/history/') and not result and not raced:
+                raced = True
+                self.fake.complete(next(iter(self.fake.pending)))
+            return result
+        self.engine.api = api_with_completion
+        await self.engine.start()
+        await self.until(lambda: self.store.get('job',job['id'])['state']=='completed')
+        self.assertTrue(raced)
+        self.assertEqual(len(self.fake.submitted),1)
+
     async def test_cancel_is_scoped_and_resume_keeps_completed_panels(self):
         self.project['pages'][0]['panels']=self.project['pages'][0]['panels'][:2]
         self.store.project(self.project)
@@ -241,6 +268,46 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         await self.client.close(); self.tmp.cleanup()
+
+    async def test_image_request_keeps_exact_dimensions_trigger_and_idempotence(self):
+        await self.engine.close()
+        data = {'id': str(uuid.uuid4()), 'character': 'scarlet', 'prompt': 'A dramatic portrait at dusk.'}
+        response = await self.client.post('/studio/api/images', auth=self.auth, headers=self.headers, json=data)
+        self.assertEqual(response.status, 200, await response.text())
+        job = self.engine.store.get('job', data['id'])
+        self.assertEqual(job['kind'], 'image')
+        self.assertEqual(job['page']['route'], 'scarlet')
+        self.assertEqual(job['page']['sampling'], 'comfy')
+        unit = job['units'][0]
+        self.assertEqual((unit['width'], unit['height']), (1152, 1536))
+        self.assertIn('sc4rl3tg0d', unit['prompt'])
+        self.assertNotIn('m4r14nqu33n2', unit['prompt'])
+        self.assertNotIn('Manga panel', unit['prompt'])
+        again = await self.client.post('/studio/api/images', auth=self.auth, headers=self.headers, json=data)
+        self.assertEqual((await again.json())['id'], data['id'])
+        self.assertEqual(len(self.engine.store.list('job')), 1)
+        bootstrap = await (await self.client.get('/studio/api/bootstrap', auth=self.auth)).json()
+        self.assertEqual(len(bootstrap['projects']), 1)  # image snapshots do not clutter manga projects
+
+    async def test_image_mutation_requires_csrf_and_rejects_invalid_settings(self):
+        data = {'id': str(uuid.uuid4()), 'character': 'scarlet', 'prompt': 'test'}
+        self.assertEqual((await self.client.post('/studio/api/images', auth=self.auth, json=data)).status, 403)
+        for change in ({'character': '../bad'}, {'width': 1153}, {'prompt': ''}, {'sampling': 'invalid'}):
+            response = await self.client.post('/studio/api/images', auth=self.auth, headers=self.headers, json=data|change)
+            self.assertEqual(response.status, 400, await response.text())
+
+    async def test_home_and_ready_point_to_image_ui_and_scarlet_manga_preset(self):
+        response = await self.client.get('/', auth=self.auth, allow_redirects=False)
+        self.assertEqual(response.headers['Location'], '/studio/image')
+        self.assertEqual((await self.client.get('/studio/image')).status, 401)
+        self.assertEqual((await self.client.get('/studio/image', auth=self.auth)).status, 200)
+        ready = await (await self.client.get('/startup/status', auth=self.auth)).json()
+        self.assertTrue(ready['ready'])
+        response = await self.client.post('/studio/api/projects', auth=self.auth, headers=self.headers, json={'character':'scarlet'})
+        p = await response.json()
+        self.assertEqual(p['trigger'], 'sc4rl3tg0d')
+        self.assertEqual(p['pages'][0]['route'], 'scarlet')
+        self.assertNotIn('Marian', compile_prompt(p, p['pages'][0]))
 
     async def test_studio_assets_and_state_require_login_and_same_origin_mutations(self):
         for route in ('/studio/','/studio/api/bootstrap','/studio/app.js','/studio/api/assets/anything'):
@@ -307,7 +374,7 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.content_type,'image/png')
         preview=await response.read()
         with Image.open(io.BytesIO(preview)) as im:
-            self.assertEqual(im.size,(1152,1728))
+            self.assertEqual(im.size,(1152,1536))
             self.assertEqual(im.getpixel((0,0)),(77,117,100))
             self.assertGreater(len(im.crop((806,173,1071,864)).getcolors(1_000_000)),10)
         svg=svg_page(p,pg,self.engine.store,FONT,embed=True).decode()

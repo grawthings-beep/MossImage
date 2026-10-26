@@ -7,11 +7,13 @@ import json
 from pathlib import Path
 import secrets
 import zipfile
+import uuid
+from characters import CHARACTERS, image_prompt
 
 from aiohttp import web
 from .jobs import Engine, ACTIVE
 from .render import png_page, svg_page
-from .schema import default_project, validate_project, compile_prompt, ident
+from .schema import default_project, validate_project, compile_prompt, ident, text
 from .store import Store, Conflict
 
 STATIC = Path(__file__).with_name('web')
@@ -97,23 +99,64 @@ def mount(app, runtime, upstream):
     async def index(request):
         return web.FileResponse(STATIC / 'index.html')
 
+    async def image_index(request):
+        return web.FileResponse(STATIC / 'image.html')
+
     async def static(request):
         name = request.match_info['name']
-        if name not in ('app.js', 'style.css'):
+        if name not in ('app.js', 'style.css', 'image.js'):
             raise web.HTTPNotFound()
         return web.FileResponse(STATIC / name)
 
     async def bootstrap(request):
-        projects = store.list('project')
+        projects = [p for p in store.list('project') if p.get('mode') != 'image']
         if not projects:
             projects = [store.project(validate_project(default_project()))]
         return web.json_response({'csrf_token': csrf_token,
+                                  'characters': CHARACTERS,
                                   'projects': [{'id': p['id'], 'title': p['title'], 'pages': len(p['pages'])} for p in projects],
                                   'jobs': [job_summary(j) for j in store.list('job')[:60]]})
 
     async def new_project(request):
         p = validate_project(default_project())
+        data = await body(request) if request.can_read_body else {}
+        character_id = data.get('character', 'marian')
+        if character_id not in CHARACTERS:
+            raise ValueError('キャラクターを選んでください。')
+        if character_id != 'marian':
+            c = CHARACTERS[character_id]
+            p.update(title=c['name'], character=c['description'], trigger=c['trigger'])
+            pg = p['pages'][0]
+            pg.update(route=character_id, scene='A ruined shrine after rain. Red lanterns glow through the mist. The woman senses someone approaching.')
+            for panel in pg['panels']:
+                panel['caption'] = panel['caption'].replace('Marian', 'The woman').replace('crown and collar jewel', 'hair ornament and red scarf').replace('hip frills', 'scarf')
         return web.json_response(store.project(p))
+
+    async def generate_image(request):
+        data = await body(request)
+        jid = str(uuid.UUID(str(data['id'])))
+        try:
+            return web.json_response(job_summary(store.get('job', jid)))
+        except KeyError:
+            pass
+        cid = data.get('character', 'scarlet')
+        if cid not in CHARACTERS:
+            raise ValueError('キャラクターを選んでください。')
+        prompt_text = text(data.get('prompt', ''), 16000).strip()
+        if not prompt_text:
+            raise ValueError('プロンプトを入力してください。')
+        p = default_project()
+        p.update(id='image_' + uuid.UUID(jid).hex, title=CHARACTERS[cid]['name'], mode='image')
+        pg = p['pages'][0]
+        pg.update(title=CHARACTERS[cid]['name'], route=cid, scene=image_prompt(cid, prompt_text),
+                  width=data.get('width', 1152), height=data.get('height', 1536),
+                  sampling=data.get('sampling', 'comfy'), seed=data.get('seed', 42),
+                  lora_strength=data.get('lora_strength', 1.0))
+        p = validate_project(p)
+        # Immutable per-submission snapshot; repeated request IDs reuse the job above.
+        store.put('project', p)
+        return web.json_response(job_summary(engine.create({
+            'id': jid, 'project_id': p['id'], 'page_id': pg['id'], 'kind': 'image'})))
 
     async def project(request):
         key = ident(request.match_info['id'])
@@ -228,7 +271,8 @@ def mount(app, runtime, upstream):
 
     app.router.add_get('/studio', redirect)
     app.router.add_get('/studio/', index)
-    app.router.add_get('/studio/{name:app.js|style.css}', static)
+    app.router.add_get('/studio/image', image_index)
+    app.router.add_get('/studio/{name:app.js|style.css|image.js}', static)
     app.router.add_get('/studio/font.otf', font)
     app.router.add_get('/studio/api/bootstrap', bootstrap)
     app.router.add_post('/studio/api/projects', new_project)
@@ -240,6 +284,7 @@ def mount(app, runtime, upstream):
     app.router.add_get('/studio/api/projects/{id}/pages/{page}/{kind}', export)
     app.router.add_get('/studio/api/jobs', jobs)
     app.router.add_post('/studio/api/jobs', jobs)
+    app.router.add_post('/studio/api/images', generate_image)
     app.router.add_post('/studio/api/jobs/{id}/{action}', job_action)
     app.router.add_get('/studio/api/jobs/{id}/{action:snapshot}', job_action)
     return engine

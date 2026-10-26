@@ -13,6 +13,7 @@ exec > >(tee -a "$MOSS_HOME/logs/comfy-setup.log") 2>&1
 trap 'printf "Setup failed at line %s. See %s/logs/comfy-setup.log\n" "$LINENO" "$MOSS_HOME" >&2' ERR
 command -v git >/dev/null
 command -v python3 >/dev/null
+echo 'MOSS_STAGE=GPUとCUDAを確認しています'
 python3 "$KIT/check_runtime.py" --constraints "$MOSS_HOME/comfy-cuda-constraints.txt"
 
 COMFY="$MOSS_HOME/ComfyUI"
@@ -31,9 +32,11 @@ if [[ ! -x "$MOSS_HOME/comfy-venv/bin/python" ]]; then
     python3 -m venv --system-site-packages "$MOSS_HOME/comfy-venv"
 fi
 PY="$MOSS_HOME/comfy-venv/bin/python"
+echo 'MOSS_STAGE=画像生成の依存パッケージを準備しています'
 "$PY" -m pip install --constraint "$MOSS_HOME/comfy-cuda-constraints.txt" -r "$COMFY/requirements.txt" -r "$KIT/comfy-requirements.txt"
 "$PY" "$KIT/check_runtime.py"
 "$PY" "$KIT/check_comfy.py" --comfy "$COMFY"
+echo 'MOSS_STAGE=Baseモデル・テキストエンコーダー・VAE・キャラLoRAを取得しています'
 "$PY" "$KIT/prepare_comfy.py" --runtime "$MOSS_HOME"
 "$PY" -m pip freeze > "$MOSS_HOME/comfy-installed-packages.txt"
 echo 'Setup finished. start.sh will launch the ComfyUI login page.'

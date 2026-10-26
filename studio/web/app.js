@@ -10,6 +10,7 @@ let project, pageId, projects = [], jobs = [], selected = null, currentTab = 'pa
 let version = 0, savedVersion = 0, saving = null, saveTimer, previewURL, previewRequest = 0, busy = false;
 let jobsSignature = '', pendingRequest = null;
 let csrfToken = '';
+let characters = {};
 
 function notice(message, good = false) {
   $('notice').hidden = !message;
@@ -130,7 +131,7 @@ function renderProject() {
   $('page-tabs').innerHTML = project.pages.map((pg, i) => `<button data-page="${esc(pg.id)}" class="${pg.id === pageId ? 'active' : ''}">${i+1} · ${esc(pg.title || 'ページ')}</button>`).join('');
   for (const [id, object, key] of fields) $(id).value = (object === 'project' ? project : p)[key];
   $('hires').checked = p.hires;
-  $('resolution').value = p.width === 1152 && p.height === 1728 ? '2' : p.width === 1664 && p.height === 2496 ? '4' : 'custom';
+  $('resolution').value = p.width === 1152 && p.height === 1536 ? '2' : p.width === 1664 && p.height === 2496 ? '4' : 'custom';
   $('compiled').value = '';
   referencePreview();
   renderPanels(); renderBubbles(); renderEditSources();
@@ -274,7 +275,11 @@ const fields = [
 ];
 for (const [id, object, key] of fields) $(id).addEventListener('input', () => {
   (object === 'project' ? project : page())[key] = $(id).type === 'number' ? Number($(id).value) : $(id).value;
-  if (id === 'route') referencePreview();
+  if (id === 'route') {
+    const c = characters[page().route];
+    if (c) { project.character=c.description; project.trigger=c.trigger; $('character').value=project.character; $('trigger').value=project.trigger; }
+    referencePreview();
+  }
   if (id === 'width' || id === 'height') $('resolution').value = 'custom';
   changed();
 });
@@ -282,7 +287,7 @@ $('hires').onchange = () => { page().hires = $('hires').checked; changed(); };
 $('resolution').onchange = () => {
   if ($('resolution').value === 'custom') return;
   const high = $('resolution').value === '4';
-  Object.assign(page(), {width:high ? 1664 : 1152, height:high ? 2496 : 1728, hires:high});
+  Object.assign(page(), {width:high ? 1664 : 1152, height:high ? 2496 : 1536, hires:high});
   $('width').value = page().width; $('height').value = page().height; $('hires').checked = high;
   changed();
 };
@@ -346,7 +351,7 @@ function endDrag() { if (!drag) return; drag = null; changed(); renderPanels(); 
 $('hit-layer').onpointerup = endDrag; $('hit-layer').onpointercancel = endDrag;
 for (const button of document.querySelectorAll('[data-tab]')) button.onclick = () => setTab(button.dataset.tab);
 $('projects').onchange = safely(() => exclusive(async () => { const id = $('projects').value; await flush(); await loadProject(id); }));
-$('new-project').onclick = safely(() => exclusive(async () => { await flush(); const p = await api('/projects',{method:'POST'}); projects.unshift({id:p.id,title:p.title,pages:1}); await loadProject(p.id); }));
+$('new-project').onclick = safely(() => exclusive(async () => { await flush(); const p = await api('/projects',{method:'POST',body:{character:$('new-character').value}}); projects.unshift({id:p.id,title:p.title,pages:1}); await loadProject(p.id); }));
 $('page-tabs').onclick = safely(async event => {
   const button = event.target.closest('[data-page]'); if (!button) return;
   await exclusive(async () => { await flush(); pageId = button.dataset.page; selected = null; jobsSignature=''; renderProject(); renderJobs(); });
@@ -398,7 +403,7 @@ window.addEventListener('beforeunload', event => { if (savedVersion < version) {
 setInterval(() => { if (!document.hidden) pollJobs().catch(() => { $('save-state').textContent='再接続待ち · RunPod側で生成を継続'; }); }, 3500);
 (async () => {
   try {
-    const data = await api('/bootstrap'); projects=data.projects; jobs=data.jobs;
+    const data = await api('/bootstrap'); projects=data.projects; jobs=data.jobs; characters=data.characters;
     const pending = localGet('moss-studio-pending-job');
     if (pending && jobs.some(j => j.id === JSON.parse(pending).id)) localSet('moss-studio-pending-job', null);
     const last = localGet('moss-studio-last-project');

@@ -164,7 +164,7 @@
         "Node name for S&R": "CLIPTextEncode"
       },
       "widgets_values": [
-        "m4r14nqu33n2, 1girl, solo, adult woman, long silver-white hair with black inner layers, red eyes, wearing a white knitted sweater and blue jeans, casual clothes, standing in a sunlit park, medium full shot, looking at viewer, gentle smile, detailed anime illustration, clean line art, soft natural lighting"
+        "m4r14nqu33n2, An adult woman with red eyes, long silver-white hair, black bangs and dark inner hair. She wears a black crystalline spiked crown with a black bow, a violet jewel at her collar, a dark sheer bodysuit with glossy black crossed filigree panels, short pleated black hip frills, black elbow-length fingerless gloves, patterned dark tights and black heels.\nA detailed anime illustration. She stands in a ruined cathedral at dusk, one hand resting on an ancient stone railing, composed and resolute expression. Low three-quarter camera angle, flowing hair and fabric, layered broken arches, airborne dust caught in crimson backlight, precise linework, rich shadows, intricate costume details. One complete illustration, no panels, no lettering."
       ]
     },
     {
@@ -236,8 +236,8 @@
         "Node name for S&R": "EmptyFlux2LatentImage"
       },
       "widgets_values": [
-        832,
-        1248,
+        1152,
+        1536,
         1
       ]
     },
@@ -294,10 +294,10 @@
       "widgets_values": [
         42,
         "fixed",
-        50,
-        3,
-        "euler",
-        "sgm_uniform",
+        25,
+        2.5,
+        "er_sde",
+        "simple",
         1
       ]
     },
@@ -370,7 +370,7 @@
         "Node name for S&R": "SaveImage"
       },
       "widgets_values": [
-        "MOSS/Marian_Queen2"
+        "MOSS/marian"
       ]
     },
     {
@@ -406,7 +406,14 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "LoraLoaderModelOnly"
+        "Node name for S&R": "LoraLoaderModelOnly",
+        "models": [
+          {
+            "name": "mossimage_lora_marian_queen2.safetensors",
+            "directory": "loras",
+            "url": "https://huggingface.co/uwgm/Moss/resolve/main/mossimage_lora_marian_queen2.safetensors"
+          }
+        ]
       },
       "widgets_values": [
         "mossimage_lora_marian_queen2.safetensors",
@@ -452,7 +459,7 @@
         "",
         "22",
         0,
-        1
+        0.5
       ]
     }
   ],
@@ -559,4 +566,3 @@
   },
   "version": 0.4
 }
-

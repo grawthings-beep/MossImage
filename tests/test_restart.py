@@ -27,6 +27,7 @@ class RestartTests(unittest.TestCase):
         server=['python','-u',str(kit/'launch_comfy.py'),'--runtime',str(runtime)]
         backend=['python','-u',str(runtime/'ComfyUI/main.py'),'--listen','127.0.0.1']
         self.assertTrue(owns(server,kit,runtime)); self.assertTrue(owns(backend,kit,runtime))
+        self.assertTrue(owns(['python','-u',str(kit/'pod_boot.py'),'--runtime',str(runtime)],kit,runtime))
         for argv in ([*server[:-1],str(runtime/'other')],['python','training/train.py',str(kit/'launch_comfy.py')],
                      ['python',str(runtime/'other/ComfyUI/main.py')],['bash','-c',' '.join(server)]):
             self.assertFalse(owns(argv,kit,runtime))

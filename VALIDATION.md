@@ -95,3 +95,19 @@ The user's RunPod log confirmed successful CUDA checks on torch 2.9.1+cu128 / RT
 - Executed real Pillow-to-tensor conversion and the compiled CPU NMS operation with torch 2.9.1+cpu / torchvision 0.24.1+cpu in the local test environment.
 - Downloaded the official Linux CPython 3.12 wheel `torchvision-0.24.1+cu128-cp312-cp312-manylinux_2_28_x86_64.whl` (8,049,914 bytes), verified its published SHA256 `cf84eae1d2d12a7d261a7496eca00dd927b71792011b1e84d4162c950eb3201d`, and inspected metadata requiring `torch==2.9.1`. Compatibility reference: [PyTorch previous versions](https://pytorch.org/get-started/previous-versions/).
 - `git diff --check` passed. The actual Linux CUDA wheel installation and resumed GPU pre-cache/training remain to be confirmed on the user's Pod; local CPU checks do not establish GPU training success.
+
+## Scarlet LoRA, image UI and automatic Pod startup — 2026-10-27
+
+Added the requested private `uwgm/Moss/MossImage_scarlet_goddeath.safetensors` alongside Marian, with trigger `sc4rl3tg0d`. Setup downloads both character adapters using the Pod's existing HF_TOKEN. Added an image generation page at `/studio/image`, root redirect, per-character prompts, persistent job history, PNG downloads, and separate 1152×1536/25-step ComfyUI workflows. New manga projects use the same defaults and can start with Scarlet. Existing saved projects/workflow edits remain unchanged; reference/edit jobs now respect the selected 25/50-step preset.
+
+Added a saved RunPod startup command and `runpod_start.sh`, plus an authenticated preparation page on 7860. It waits for the training GPU lock, runs setup, permits an authenticated/CSRF-checked retry after failure, and hands the port to the generation server. `MOSS_PASSWORD` gives a configured login across phases. Jupyter starts on 8888 when available and not already listening; generation remains a child of PID 1 so an explicit generation stop leaves the Pod available for training.
+
+Verified locally:
+
+- **48 unit/integration tests passed**, covering image requests, exact dimensions/steps/adapter selection, validation/auth/CSRF, duplicate request IDs, hidden image snapshots, startup-page authentication/retry, configured credentials, existing functionality, and a reproduced completion race between ComfyUI history/queue reads. Reconnection now uses the existing bounded reconciliation loop rather than incorrectly failing immediately; it never resubmits that persisted prompt.
+- **22 graph variants** accepted by the pinned real ComfyUI validator, including Scarlet; real native edit-node conditioning check passed with CPU stubs.
+- Headless Chrome at 1440px and 390px: default settings, both characters, a stale CSRF token, loss of an accepted response, closing/reopening the page without duplicate generation, output dimensions, PNG download, and Scarlet manga project creation passed. Screenshots were visually inspected; a low-contrast download label was corrected. Generated images were synthetic fixtures, not model inference.
+- Started the **real ComfyUI on CPU**, switched from the authenticated startup page to it on the **same port**, and verified the automatic browser redirect, image UI and explicit raw ComfyUI link.
+- Bash/JavaScript syntax and `git diff --check` passed.
+
+Not verified: the new private Scarlet file's tensors or learned quality, actual CUDA image generation, iOS Safari itself, and the complete Linux/container boot on the user's Pod. The HF connector confirmed the repository is private; local HF/RunPod API credentials were unavailable. No Pod/template configuration was changed remotely and no paid Pod was created. The one-time RunPod template settings are documented in `RUNPOD.md`; code publication alone does not apply them.

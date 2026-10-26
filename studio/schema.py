@@ -4,6 +4,7 @@ import json
 import math
 import re
 import uuid
+from characters import CHARACTERS
 
 NEGATIVE = 'nsfw, worst quality, bad anatomy, watermark, jpeg artifact'
 CHARACTER = ('An adult woman, Marian: Queen, with red eyes, long silver-white hair, black bangs and dark inner hair. '
@@ -59,9 +60,9 @@ def default_project():
         'id': uuid.uuid4().hex, 'revision': 0, 'title': 'マリアン：クイーン',
         'character': CHARACTER, 'trigger': 'm4r14nqu33n2', 'reference': '',
         'pages': [{
-            'id': uuid.uuid4().hex, 'title': '第1ページ', 'width': 1152, 'height': 1728,
+            'id': uuid.uuid4().hex, 'title': '第1ページ', 'width': 1152, 'height': 1536,
             'style': 'color', 'scene': 'A ruined cathedral at dusk. Dust floats through shafts of crimson light. Quiet tension builds as Marian notices a distant presence.',
-            'route': 'marian', 'sampling': 'quality', 'seed': 42, 'lora_strength': 1.0,
+            'route': 'marian', 'sampling': 'comfy', 'seed': 42, 'lora_strength': 1.0,
             'hires': False, 'hires_strength': 1.0, 'vae': 'small', 'reference': '',
             'panels': [
                 {'id': 'p1', 'box': [35, 30, 930, 330], 'caption': 'Establishing wide shot from a low angle. Marian stands beneath the towering broken arches, small against the vast cathedral. Her hair and hip frills drift in the wind.'},
@@ -93,7 +94,7 @@ def validate_project(data):
         page['title'] = text(page.get('title', ''), 160)
         page['width'], page['height'] = dimensions(page['width'], page['height'])
         page['scene'] = text(page.get('scene', ''))
-        if page.get('style') not in STYLES or page.get('route') not in ('marian', 'reference', 'base', 'sft'):
+        if page.get('style') not in STYLES or page.get('route') not in (*CHARACTERS, 'reference', 'base', 'sft'):
             raise ValueError('画風または生成モードが不正です。')
         if page.get('sampling') not in ('quality', 'comfy') or page.get('vae') not in ('small', 'full'):
             raise ValueError('生成設定が不正です。')
@@ -143,7 +144,7 @@ def pixel_box(b, width, height):
 
 def compile_prompt(project, page, panel=None):
     character = project['character'].strip()
-    if page['route'] == 'marian':
+    if page['route'] in CHARACTERS:
         character = project['trigger'].strip() + ', ' + character
     reference = 'Same character and art style as Picture 1. ' if page['route'] == 'reference' else ''
     style = STYLES[page['style']]

@@ -22,7 +22,7 @@ def owns(argv, kit, runtime):
     script = argv[2] if len(argv) > 2 and argv[1] == '-u' else argv[1] if len(argv) > 1 else ''
     if script == str(runtime / 'ComfyUI/main.py'):
         return True
-    if script != str(kit / 'launch_comfy.py') or '--runtime' not in argv:
+    if script not in (str(kit / 'launch_comfy.py'), str(kit / 'pod_boot.py')) or '--runtime' not in argv:
         return False
     index = argv.index('--runtime') + 1
     return index < len(argv) and Path(argv[index]).resolve() == runtime

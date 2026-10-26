@@ -21,5 +21,5 @@ LOG="$MOSS_HOME/logs/background.log"
 nohup bash "$KIT/start.sh" "$@" </dev/null >>"$LOG" 2>&1 &
 echo "Started in background (PID $!). Setup and model downloads may take several minutes."
 echo "Log: tail -n 80 -f '$LOG'"
-echo 'After the log shows Manga Studio, open HTTP Service 7860 and append /studio/ to its URL.'
-echo 'HF_TOKEN must already be set, or the Marian LoRA must already be installed.'
+echo 'Open HTTP Service 7860 to watch setup and generate images when ready.'
+echo 'Set MOSS_PASSWORD once to choose your login password. HF_TOKEN must read the character LoRAs.'

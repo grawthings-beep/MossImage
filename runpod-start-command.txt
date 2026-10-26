@@ -1,0 +1,1 @@
+bash -lc 'set -e; mkdir -p /workspace; if [ -d /workspace/MossImage/.git ]; then git -C /workspace/MossImage pull --ff-only; else git clone https://github.com/grawthings-beep/MossImage.git /workspace/MossImage; fi; exec bash /workspace/MossImage/runpod_start.sh'

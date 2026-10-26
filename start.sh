@@ -11,8 +11,4 @@ mkdir -p "$MOSS_HOME/logs"
 exec 9>"$MOSS_HOME/runtime.lock"
 flock -n 9 || { echo 'MOSS-Image is already starting or running in this MOSS_HOME.' >&2; exit 1; }
 export MOSS_TRAIN_HOME="${MOSS_TRAIN_HOME:-/workspace/moss-training}"
-mkdir -p "$MOSS_TRAIN_HOME"
-exec 8>"$MOSS_TRAIN_HOME/gpu.lock"
-flock -n 8 || { echo 'MOSS training is using this GPU. Start generation after it finishes.' >&2; exit 1; }
-bash "$KIT/setup.sh"
-exec "$MOSS_HOME/comfy-venv/bin/python" -u "$KIT/launch_comfy.py" --runtime "$MOSS_HOME" "$@" > >(tee -a "$MOSS_HOME/logs/comfy-ui.log") 2>&1
+exec python3 -u "$KIT/pod_boot.py" --runtime "$MOSS_HOME" "$@" > >(tee -a "$MOSS_HOME/logs/comfy-ui.log") 2>&1

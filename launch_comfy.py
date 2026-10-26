@@ -33,13 +33,13 @@ def forwarded_headers(headers):
 
 
 def proxy_app(upstream, login, runtime=None):
-    expected = BasicAuth(login["username"], login["password"]).encode()
+    expected = BasicAuth(login["username"], login["password"], encoding='utf-8').encode()
 
     @web.middleware
     async def authenticate(request, handler):
         provided = request.headers.get("Authorization", "")
         if not hmac.compare_digest(provided.encode(), expected.encode()):
-            raise web.HTTPUnauthorized(headers={"WWW-Authenticate": 'Basic realm="MOSS-Image"'})
+            raise web.HTTPUnauthorized(headers={"WWW-Authenticate": 'Basic realm="MOSS-Image", charset="UTF-8"'})
         return await handler(request)
 
     app = web.Application(middlewares=[authenticate], client_max_size=1024**3)
@@ -100,6 +100,15 @@ def proxy_app(upstream, login, runtime=None):
     if runtime is not None:
         from studio.api import mount
         mount(app, runtime, upstream)
+        async def home(request):
+            # Explicit opt-in preserves the raw ComfyUI entry point for saved users.
+            if request.query.get('comfy') == '1':
+                return await proxy(request)
+            raise web.HTTPFound('/studio/image')
+        async def ready(request):
+            return web.json_response({'ready': True, 'url': '/studio/image'})
+        app.router.add_get('/', home)
+        app.router.add_get('/startup/status', ready)
     app.router.add_route("*", "/{path:.*}", proxy)
     return app
 
@@ -144,7 +153,7 @@ async def serve(args):
                    if pod_id else f"http://127.0.0.1:{args.port}")
         print(f"Open: {address}", flush=True)
         print(f"Manga Studio: {address}/studio/", flush=True)
-        print("Workflows -> moss_marian_queen2 -> Run", flush=True)
+        print(f"Image generation: {address}/studio/image", flush=True)
         print(f"Images: {comfy / 'output' / 'MOSS'}", flush=True)
         code = await process.wait()
         if code:

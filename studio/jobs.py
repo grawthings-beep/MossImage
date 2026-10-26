@@ -89,7 +89,7 @@ class Engine:
         if page is None:
             raise ValueError('ページが見つかりません。')
         kind = data['kind']
-        if kind not in ('page', 'panels', 'edit'):
+        if kind not in ('page', 'panels', 'edit', 'image'):
             raise ValueError('生成種別が不正です。')
         units = []
         apply_target = data.get('apply_target', '')
@@ -111,6 +111,10 @@ class Engine:
             w, h = max(256, round(w*scale/16)*16), max(256, round(h*scale/16)*16)
             units.append({'id': 'edit', 'source': source, 'crop': crop, 'width': w, 'height': h,
                           'prompt': instruction + '\nPreserve the character identity, costume details, art style and all elements not explicitly requested to change.'})
+        elif kind == 'image':
+            # A single illustration keeps the exact selected dimensions and prompt.
+            # It must not inherit manga layout wording or panel-size rescaling.
+            units.append({'id': 'image', 'width': page['width'], 'height': page['height'], 'prompt': page['scene']})
         elif kind == 'page':
             units.append({'id': 'page', 'width': page['width'], 'height': page['height'], 'prompt': compile_prompt(project, page)})
         else:
@@ -224,9 +228,9 @@ class Engine:
             if found:
                 self.finish_unit(job, unit, found)
                 return
-            where, entry = await self.location(unit)
-            if where == 'missing':
-                raise RuntimeError('中断した生成をComfyUI履歴で確認できません。完了済み結果は保持しました。「再開」で未完了分を再実行できます。')
+            # History and queue are separate requests. Completion between them can
+            # briefly look missing; use the bounded reconciliation loop below.
+            # A persisted submission is never submitted again here.
         else:
             reference = self.reference_file(job, unit)
             graph, output = build_graph(job['page'], unit['prompt'], unit['width'], unit['height'], unit['seed'],
@@ -308,7 +312,7 @@ class Engine:
                     if job['state'] == 'cancelled':
                         break
                 if job['state'] != 'cancelled':
-                    self.save(job, 'completed', '完成しました。「ページに採用」で編集に反映できます。')
+                    self.save(job, 'completed', '完成しました。PNGを保存できます。' if job['kind'] == 'image' else '完成しました。「ページに採用」で編集に反映できます。')
             except asyncio.CancelledError:
                 raise
             except Exception as error:
