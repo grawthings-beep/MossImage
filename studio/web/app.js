@@ -11,6 +11,7 @@ let version = 0, savedVersion = 0, saving = null, saveTimer, previewURL, preview
 let jobsSignature = '', pendingRequest = null;
 let csrfToken = '';
 let characters = {};
+let pollingJobs = false;
 
 function notice(message, good = false) {
   $('notice').hidden = !message;
@@ -216,13 +217,17 @@ function renderEditSources() {
   $('generate-edit').disabled = !sources.size;
 }
 async function pollJobs() {
-  if (!project) return;
+  if (!project || pollingJobs) return;
+  pollingJobs=true;
+  try {
   const id = project.id;
   const result = await api('/jobs?project=' + id);
   if (id !== project.id) return;
   jobs = result;
-  const signature = JSON.stringify(result) + pageId;
+  const signature = JSON.stringify(result.map(MossProgress.structure)) + pageId;
   if (signature !== jobsSignature) { jobsSignature = signature; renderJobs(); renderEditSources(); }
+  else MossProgress.update($('jobs'),jobs);
+  } finally { pollingJobs=false; }
 }
 function renderJobs() {
   const targets = new Map([...document.querySelectorAll('[data-apply-target]')].map(el => [el.dataset.applyTarget, el.value]));
@@ -230,11 +235,12 @@ function renderJobs() {
   $('jobs').innerHTML = jobs.filter(j => j.page_id === pageId).map(j => {
     const completed = j.units.filter(u => u.asset);
     return `<article class="job-card" data-job="${j.id}"><div class="card-heading"><strong>${esc(j.title)} · ${{page:'全体生成',panels:'コマ生成',edit:'画像修正'}[j.kind]}</strong><span class="job-state ${j.state}">${states[j.state]}</span></div>
-      <div class="hint">${new Date(j.created*1000).toLocaleString()} · seed ${j.units[0].seed}</div><p class="job-message">${esc(j.message)}</p>
+      <div class="hint">${new Date(j.created*1000).toLocaleString()} · seed ${j.units[0].seed}</div><p class="job-message">${esc(j.message)}</p><div class="job-progress" data-progress-job="${esc(j.id)}"></div>
       <div class="job-images">${completed.map(u => `<figure><a href="${assetURL(u.asset)}" target="_blank" rel="noopener"><img src="${assetURL(u.asset)}" loading="lazy" alt="${esc(u.id)}の生成結果"></a><button data-action="apply" data-job="${j.id}" data-unit="${esc(u.id)}">${j.kind === 'panels' ? 'このコマを採用' : 'ページに採用'}</button><a href="${assetURL(u.asset)}" download="moss-${j.id}-${u.id}.png">元画像を保存 ↗</a></figure>`).join('')}</div>
       ${j.kind === 'edit' && completed.length ? `<label>修正画像の採用先<select data-apply-target="${j.id}"><option value="">ページ全体</option>${page().panels.map((p,i) => `<option value="${p.id}" ${p.id === j.apply_target ? 'selected' : ''}>コマ ${i+1}</option>`).join('')}</select></label>` : ''}
       <div class="job-actions">${j.kind === 'panels' && completed.length > 1 ? `<button data-action="apply" data-job="${j.id}">完成したコマをすべて採用</button>` : ''}${active.includes(j.state) ? `<button class="danger" data-action="cancel" data-job="${j.id}" ${j.cancel_requested ? 'disabled' : ''}>${j.cancel_requested ? '中止を待っています' : '中止'}</button>` : ''}${['failed','cancelled'].includes(j.state) ? `<button data-action="resume" data-job="${j.id}">未完了分を再開</button>` : ''}<a href="/studio/api/jobs/${j.id}/snapshot" class="button secondary">生成設定を保存</a></div></article>`;
   }).join('') || '<p class="empty">このページの生成履歴はまだありません。</p>';
+  MossProgress.update($('jobs'),jobs);
   for (const el of document.querySelectorAll('[data-apply-target]')) if (targets.has(el.dataset.applyTarget)) el.value = targets.get(el.dataset.applyTarget);
 }
 async function generate(kind, extra = {}) {
@@ -400,7 +406,7 @@ document.addEventListener('visibilitychange', () => {
   else { pollJobs().catch(error => notice(error.message)); if (version > savedVersion) flush().catch(error => notice(error.message)); }
 });
 window.addEventListener('beforeunload', event => { if (savedVersion < version) { event.preventDefault(); event.returnValue=''; } });
-setInterval(() => { if (!document.hidden) pollJobs().catch(() => { $('save-state').textContent='再接続待ち · RunPod側で生成を継続'; }); }, 3500);
+setInterval(() => { if (!document.hidden) pollJobs().catch(() => { $('save-state').textContent='再接続待ち · RunPod側で生成を継続'; }); }, 1000);
 (async () => {
   try {
     const data = await api('/bootstrap'); projects=data.projects; jobs=data.jobs; characters=data.characters;

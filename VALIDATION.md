@@ -111,3 +111,14 @@ Verified locally:
 - Bash/JavaScript syntax and `git diff --check` passed.
 
 Not verified: the new private Scarlet file's tensors or learned quality, actual CUDA image generation, iOS Safari itself, and the complete Linux/container boot on the user's Pod. The HF connector confirmed the repository is private; local HF/RunPod API credentials were unavailable. No Pod/template configuration was changed remotely and no paid Pod was created. The one-time RunPod template settings are documented in `RUNPOD.md`; code publication alone does not apply them.
+
+## Visible generation progress — 2026-10-27
+
+Added a per-prompt ComfyUI WebSocket observer and a shared image/manga progress display. The UI shows actual sampling steps/percentage, preparation/decode/save phases, elapsed time and metadata-scoped latent previews. The server persists progress and one bounded JPEG per prompt, reconnects independently of the browser, and continues generation if telemetry is unavailable. Preview requests use the existing authentication. Step percentages describe sampling, not total remaining time; successful output reconciliation still determines completion. Generation defaults remain 1152×1536 and 25 steps.
+
+- **51 unit/integration tests passed**, including real local WebSocket transport, foreign prompt/preview exclusion, invalid counters, disconnect/reconnect, a delayed single progress event being flushed, reopening SQLite without resubmission, and authenticated preview access restricted to recorded job units. Existing queue/cancellation/image/training tests remain passing.
+- Headless Chrome at desktop and 390px width passed image and manga progress, 8/25 = 32%, changing elapsed time, authenticated preview rendering, closing/reopening at 12/25, no premature completion during VAEDecode, and final 1152×1536 output. No JavaScript page errors or horizontal overflow; screenshots visually inspected. Events/pixels were synthetic fixtures, not GPU generation. Actual iOS Safari was not exercised.
+- The event names, preview feature negotiation, metadata-bearing binary format and per-prompt `latent2rgb` override were checked against this repository's pinned ComfyUI source. No preview model weights are required.
+- Executed the pinned native Flux2 `Latent2RGBPreviewer` on random CPU latents, serialized its image with the real `PromptServer.send_image_with_metadata`, and decoded/persisted that binary frame through the Studio observer. The resulting JPEG was 384×512. This verifies the preview conversion/wire path, not trained model inference. JavaScript syntax and `git diff --check` passed.
+
+Not verified: full-weight CUDA generation/preview performance or deployment to the user's running Pod. Updating an already running server requires a restart after its current work finishes.

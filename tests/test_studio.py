@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import struct
 import tempfile
 import unittest
 from unittest.mock import AsyncMock, Mock
@@ -92,12 +93,36 @@ class FakeComfy:
     def __init__(self, runtime):
         self.runtime = Path(runtime)
         self.submitted, self.pending, self.history, self.interrupted = [], {}, {}, []
+        self.sockets = {}
         self.app = web.Application()
         self.app.router.add_post('/prompt', self.prompt)
         self.app.router.add_get('/queue', self.queue)
         self.app.router.add_post('/queue', self.delete)
         self.app.router.add_get('/history/{id}', self.get_history)
         self.app.router.add_post('/interrupt', self.interrupt)
+        self.app.router.add_get('/ws', self.websocket)
+
+    async def websocket(self, request):
+        socket = web.WebSocketResponse()
+        await socket.prepare(request)
+        key = request.query['clientId']
+        self.sockets[key] = socket
+        try:
+            async for message in socket:
+                pass
+        finally:
+            if self.sockets.get(key) is socket:
+                self.sockets.pop(key, None)
+        return socket
+
+    async def event(self, key, kind, **data):
+        client = self.pending[key]['client_id']
+        await self.sockets[client].send_json({'type':kind, 'data':{'prompt_id':key, **data}})
+
+    async def preview(self, prompt_id, metadata_prompt=None):
+        metadata = json.dumps({'prompt_id':metadata_prompt or prompt_id, 'image_type':'image/png'}).encode()
+        client = self.pending[prompt_id]['client_id']
+        await self.sockets[client].send_bytes(struct.pack('>II', 4, len(metadata))+metadata+image_data((512,384)))
 
     async def prompt(self, request):
         body = await request.json(); key = body['prompt_id']
@@ -188,6 +213,56 @@ class QueueTests(unittest.IsolatedAsyncioTestCase):
         await self.engine.close()
         self.fake.complete(next(iter(self.fake.pending))); self.fake.history.clear()
         self.engine=self.make_engine(); await self.engine.start()
+        await self.until(lambda:self.store.get('job',job['id'])['state']=='completed')
+        self.assertEqual(len(self.fake.submitted),1)
+
+    async def test_real_websocket_progress_preview_and_reconnect_are_scoped_to_job(self):
+        job,_ = self.create()
+        await self.until(lambda: len(self.fake.pending)==1)
+        key = next(iter(self.fake.pending))
+        graph = self.fake.pending[key]['prompt']
+        sampler = next(k for k,v in graph.items() if v['class_type']=='KSampler')
+        vae = next(k for k,v in graph.items() if v['class_type']=='VAEDecode')
+        await self.fake.event(key, 'executing', node=sampler)
+        await self.fake.event(key, 'progress', node=sampler, value=8, max=25)
+        current = lambda: self.store.get('job',job['id'])['units'][0]['progress']
+        await self.until(lambda: current().get('step')==8)
+        await self.fake.event(key, 'progress', prompt_id='different-prompt', node=sampler, value=24, max=25)
+        await self.fake.event(key, 'progress', node=sampler, value=9, max=0)
+        await self.fake.preview(key, metadata_prompt='different-prompt')
+        await asyncio.sleep(.05)
+        self.assertEqual(current()['step'],8)
+        self.assertNotIn('preview_version',current())
+        await self.fake.preview(key)
+        await self.until(lambda: bool(current().get('preview_version')))
+        with Image.open(self.store.root/'previews'/(key+'.jpg')) as image:
+            self.assertEqual(image.size,(512,384))
+        client = self.fake.pending[key]['client_id']
+        old = self.fake.sockets[client]
+        await old.close()
+        await self.until(lambda: not current()['live'])
+        await self.until(lambda: client in self.fake.sockets and self.fake.sockets[client] is not old)
+        await self.fake.event(key, 'progress_state', nodes={sampler:{'state':'running','value':12,'max':25}})
+        await self.until(lambda: current().get('step')==12)
+        await self.fake.event(key, 'executing', node=vae)
+        await self.until(lambda: current()['stage']=='画像を仕上げ中')
+        self.assertEqual(current()['step'],12)  # no invented completion percentage
+        self.fake.complete(key)
+        await self.until(lambda: self.store.get('job',job['id'])['state']=='completed')
+        self.assertEqual(len(self.fake.submitted),1)
+
+    async def test_progress_snapshot_survives_reopening_store(self):
+        job,_ = self.create()
+        await self.until(lambda: len(self.fake.pending)==1)
+        key = next(iter(self.fake.pending))
+        sampler = next(k for k,v in self.fake.pending[key]['prompt'].items() if v['class_type']=='KSampler')
+        await self.fake.event(key,'progress',node=sampler,value=5,max=25)
+        await self.until(lambda:self.store.get('job',job['id'])['units'][0].get('progress',{}).get('step')==5)
+        await self.engine.close()
+        self.store.close();self.store=Store(self.root/'studio')
+        self.engine=self.make_engine();await self.engine.start()
+        self.assertEqual(self.store.get('job',job['id'])['units'][0]['progress']['step'],5)
+        self.fake.complete(key)
         await self.until(lambda:self.store.get('job',job['id'])['state']=='completed')
         self.assertEqual(len(self.fake.submitted),1)
 
@@ -295,6 +370,28 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
         for change in ({'character': '../bad'}, {'width': 1153}, {'prompt': ''}, {'sampling': 'invalid'}):
             response = await self.client.post('/studio/api/images', auth=self.auth, headers=self.headers, json=data|change)
             self.assertEqual(response.status, 400, await response.text())
+
+    async def test_progress_preview_requires_login_and_recorded_job_unit(self):
+        await self.engine.close()
+        data = {'id': str(uuid.uuid4()), 'character': 'scarlet', 'prompt': 'test'}
+        await self.client.post('/studio/api/images', auth=self.auth, headers=self.headers, json=data)
+        job = self.engine.store.get('job', data['id'])
+        unit = job['units'][0]
+        unit['progress'] = {'preview_version': '1', 'step': 8, 'total': 25}
+        folder = self.engine.store.root/'previews'
+        folder.mkdir()
+        raw = image_data((512,384))
+        (folder/(unit['prompt_id']+'.jpg')).write_bytes(raw)
+        self.engine.save(job)
+        route = f'/studio/api/jobs/{job["id"]}/preview/{unit["id"]}'
+        self.assertEqual((await self.client.get(route)).status, 401)
+        self.assertEqual((await self.client.get(route+'-unknown', auth=self.auth)).status, 404)
+        response = await self.client.get(route, auth=self.auth)
+        self.assertEqual(response.status, 200)
+        self.assertEqual(response.headers['Cache-Control'], 'no-store')
+        self.assertEqual(await response.read(), raw)
+        (folder/(unit['prompt_id']+'.jpg')).unlink()
+        self.assertEqual((await self.client.get(route, auth=self.auth)).status, 404)
 
     async def test_home_and_ready_point_to_image_ui_and_scarlet_manga_preset(self):
         response = await self.client.get('/', auth=self.auth, allow_redirects=False)

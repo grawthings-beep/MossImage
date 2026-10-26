@@ -16,6 +16,7 @@ from PIL import Image, ImageOps
 from .assets import Downloads, required_models
 from .schema import compile_prompt, ident, panel_dimensions, pixel_box, box, text
 from .workflow import build_graph
+from .progress import Progress
 
 LOG = logging.getLogger(__name__)
 ACTIVE = ('queued', 'preparing', 'running')
@@ -151,6 +152,10 @@ class Engine:
             pass
         if state is not None:
             job['state'] = state
+            if state == 'preparing':
+                job.setdefault('started_at', time.time())
+            if state not in ACTIVE:
+                job['finished_at'] = time.time()
         if message is not None:
             job['message'] = message
         job['updated'] = time.time()
@@ -222,6 +227,17 @@ class Engine:
         self.save(job)
 
     async def run_unit(self, job, unit):
+        if unit['state'] == 'queued':
+            unit['client_id'] = 'moss-studio-'+unit['prompt_id']
+            unit.pop('progress', None)
+        monitor = Progress(self, job, unit)
+        try:
+            await monitor.start()
+            await self._run_unit(job, unit)
+        finally:
+            await monitor.close()
+
+    async def _run_unit(self, job, unit):
         # First reconcile a persisted submission; never blindly re-submit after reconnect/restart.
         if unit['state'] != 'queued':
             found = self.saved_output(job, unit)
@@ -239,7 +255,7 @@ class Engine:
             self.save(job)
             try:
                 await self.api('POST', '/prompt', json={'prompt_id': unit['prompt_id'], 'prompt': graph,
-                    'client_id': 'moss-studio', 'extra_data': {'extra_pnginfo': {'moss_studio': {
+                    'client_id': unit.get('client_id', 'moss-studio'), 'extra_data': {'preview_method': 'latent2rgb', 'extra_pnginfo': {'moss_studio': {
                         'job_id': job['id'], 'unit': unit['id'], 'project': job['snapshot'], 'graph': graph}}}})
             except Exception:
                 # The server may have accepted it even if the HTTP response was lost.
@@ -299,7 +315,9 @@ class Engine:
                         break
                     self.save(job, message=f'{name} を準備しています。初回の取得中も画面を閉じられます。')
                     await asyncio.to_thread(self.downloads.ensure, name)
-                await self.fonts()
+                if job['kind'] != 'image':
+                    self.save(job, message='日本語フォントを準備しています。')
+                    await self.fonts()
                 for index, unit in enumerate(job['units']):
                     if self.store.get('job', job['id']).get('cancel_requested'):
                         job['cancel_requested'] = True
@@ -307,6 +325,7 @@ class Engine:
                         break
                     if unit['state'] == 'completed':
                         continue
+                    job['current_unit'] = index
                     self.save(job, 'running', f'{index+1} / {len(job["units"])} を生成中')
                     await self.run_unit(job, unit)
                     if job['state'] == 'cancelled':
@@ -342,7 +361,10 @@ class Engine:
                 unit['attempt'] += 1
                 unit['prompt_id'] = str(uuid.uuid5(uuid.UUID(job['id']), unit['id'] + ':' + str(unit['attempt'])))
                 unit['state'] = 'queued'
+                unit.pop('progress', None)
+                unit.pop('started_at', None)
         job['cancel_requested'] = False
+        job.pop('finished_at', None)
         self.store.put('job', job)
         self.save(job, 'queued', '未完了分から再開します。')
         self.wake.set()

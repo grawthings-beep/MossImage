@@ -15,12 +15,14 @@ from .jobs import Engine, ACTIVE
 from .render import png_page, svg_page
 from .schema import default_project, validate_project, compile_prompt, ident, text
 from .store import Store, Conflict
+from .progress import elapsed
 
 STATIC = Path(__file__).with_name('web')
 
 
 def job_summary(job):
     return {k: v for k, v in job.items() if k not in ('snapshot', 'page', 'reference', 'units')} | {
+        'elapsed_seconds': elapsed(job),
         'units': [{k: v for k, v in unit.items() if k not in ('graph', 'prompt')} for unit in job['units']]}
 
 
@@ -104,7 +106,7 @@ def mount(app, runtime, upstream):
 
     async def static(request):
         name = request.match_info['name']
-        if name not in ('app.js', 'style.css', 'image.js'):
+        if name not in ('app.js', 'style.css', 'image.js', 'progress.js'):
             raise web.HTTPNotFound()
         return web.FileResponse(STATIC / name)
 
@@ -174,6 +176,16 @@ def mount(app, runtime, upstream):
 
     async def asset(request):
         return web.FileResponse(store.asset_path(ident(request.match_info['id'])))
+
+    async def preview(request):
+        job = store.get('job', ident(request.match_info['id']))
+        unit = next((u for u in job['units'] if u['id'] == request.match_info['unit']), None)
+        if not unit or not unit.get('progress', {}).get('preview_version'):
+            raise web.HTTPNotFound()
+        path = store.root/'previews'/(str(uuid.UUID(unit['prompt_id']))+'.jpg')
+        if not path.is_file():
+            raise web.HTTPNotFound()
+        return web.FileResponse(path, headers={'Content-Type':'image/jpeg'})
 
     async def font(request):
         path = await engine.fonts()
@@ -272,7 +284,7 @@ def mount(app, runtime, upstream):
     app.router.add_get('/studio', redirect)
     app.router.add_get('/studio/', index)
     app.router.add_get('/studio/image', image_index)
-    app.router.add_get('/studio/{name:app.js|style.css|image.js}', static)
+    app.router.add_get('/studio/{name:app.js|style.css|image.js|progress.js}', static)
     app.router.add_get('/studio/font.otf', font)
     app.router.add_get('/studio/api/bootstrap', bootstrap)
     app.router.add_post('/studio/api/projects', new_project)
@@ -283,6 +295,7 @@ def mount(app, runtime, upstream):
     app.router.add_get('/studio/api/projects/{id}/pages/{page}/prompt', prompt)
     app.router.add_get('/studio/api/projects/{id}/pages/{page}/{kind}', export)
     app.router.add_get('/studio/api/jobs', jobs)
+    app.router.add_get('/studio/api/jobs/{id}/preview/{unit}', preview)
     app.router.add_post('/studio/api/jobs', jobs)
     app.router.add_post('/studio/api/images', generate_image)
     app.router.add_post('/studio/api/jobs/{id}/{action}', job_action)
