@@ -2,6 +2,8 @@
 
 このrepoを起動すると、MOSS対応版ComfyUI・MOSS-Image Base・マリアン：クイーンLoRA・生成ワークフローをまとめて準備します。追加のComfyUIテンプレートは不要です。
 
+**漫画を作る場合:** 起動後のURLの末尾に **`/studio/`** を付けると、同じログインで「漫画スタジオ」を使えます。コマ割りを公式形式のJSONに変換し、全体生成／コマ別生成、参照画像、部分修正、日本語の縦書き、PNG・SVG保存に対応。[使い方とモデル構成](MANGA.md)。
+
 **LoRAを作る場合:** [PCから送信してRunPodで自動学習する手順](TRAINING.md)。画像とキャプションをまとめて送り、Podに1行貼ると受信・Pre-Cache・学習・保存までバックグラウンドで進みます。
 
 ## 1. Podを用意
@@ -17,23 +19,29 @@
 PodのTerminalで、この1行を実行します。
 
 ```bash
-cd /workspace && git clone https://github.com/grawthings-beep/MossImage.git && cd MossImage && bash start.sh
+cd /workspace && git clone https://github.com/grawthings-beep/MossImage.git && cd MossImage && bash background.sh
 ```
 
 CUDA実演算の確認 → MOSS対応ComfyUIの固定版を取得 → 依存の確認 → LoRAとモデルの取得 → ログイン付きComfyUI起動、の順で進みます。モデルは合計約30GBです。初回はダウンロードに時間がかかります。
 
-最後に表示される **Login user / Login password** を使い、RunPodの **Connect → HTTP Service 7860** を開きます。この起動方法ではターミナルを開いたまま使います。終了はCtrl+Cです。
+この起動方法はバックグラウンドで動くため、iPhoneのSafariやターミナルを閉じてもセットアップ・生成が続きます。**HF_TOKENを設定済み**、またはLoRAを配置済みで使用してください。初回の進行とログイン情報を表示:
+
+```bash
+tail -n 80 -f /workspace/moss-image-runtime/logs/background.log
+```
+
+ログの **Login user / Login password** を使い、RunPodの **Connect → HTTP Service 7860** を開きます。漫画スタジオはそのURLの末尾に **`/studio/`** を付けて開きます。`tail`の終了はCtrl+Cで、サーバーは継続します。対話的なトークン入力が必要な場合は、従来どおり `bash start.sh` を使えます。
 
 すでにこのrepoを取得している場合は、停止してから更新します。
 
 ```bash
-cd /workspace/MossImage && git pull --ff-only && bash start.sh
+cd /workspace/MossImage && git pull --ff-only && bash background.sh
 ```
 
 通常の再起動・ダウンロード中断後の再開:
 
 ```bash
-cd /workspace/MossImage && bash start.sh
+cd /workspace/MossImage && bash background.sh
 ```
 
 ### LoRAをPCからアップロードする場合
@@ -69,15 +77,10 @@ cd /workspace/MossImage && bash start.sh
 | ログイン情報 | /workspace/moss-image-runtime/login.json |
 | セットアップログ | /workspace/moss-image-runtime/logs/comfy-setup.log |
 | UIログ | /workspace/moss-image-runtime/logs/comfy-ui.log |
+| 漫画の作品・生成キュー・画像・フォント | /workspace/moss-image-runtime/studio/ |
+| バックグラウンド起動ログ | /workspace/moss-image-runtime/logs/background.log |
 
-初回の起動確認後、ターミナルを閉じても動かす場合:
-
-```bash
-cd /workspace/MossImage
-nohup bash start.sh > /workspace/moss-image-start.log 2>&1 &
-```
-
-ログ表示は `tail -f /workspace/moss-image-start.log`。作業後はPodをStopします。必要な画像はストレージ削除前に保存してください。
+作業後はPodをStopします。Podの停止・削除と、Safariを閉じる操作は別です。必要な画像・作品ZIPはストレージ削除前に保存してください。稼働中の旧サーバーは `git pull` だけでは更新されません。生成の完了後に旧プロセスを止め、更新したコードで起動してください。
 
 ## 実装と検証
 

@@ -52,3 +52,27 @@ Not performed: live PC→RunPod transfer, Linux process detachment/flock on a re
 The source is pinned to AcademiaSD commit `a5751f9cb051399c4ccf1152ce095c95b8f246f1`, with model revision `ae628cc6ea7186ce8d1d4b4c20295a0573be4905`. Generated datasets, transfer codes, tokens and model weights are excluded from the public repository.
 
 ---
+
+# Manga Studio — 2026-10-27
+
+Added `/studio/` behind the existing login, a server-owned persistent queue, official-format layout prompts, whole-page/per-panel generation, optional high-resolution LoHa, CharRef, SFT-based Edit HQ, Japanese lettering, portable SVG/PNG/ZIP exports, and `background.sh` for detached startup.
+
+Verified locally:
+
+- **29 unit/integration tests passed**, including all 16 existing generation/training tests. New coverage includes authenticated Studio APIs, same-origin mutation checks, chunked uploads, optimistic revisions, idempotent job creation, browser-independent execution, reopening the database and rejoining a running prompt, recovery from a saved output without Comfy history, targeted cancellation and concurrent resume, preservation of completed panels, crop-edit pixels outside the rectangle, and Japanese PNG/SVG/ZIP exports.
+- The pinned **real ComfyUI validator accepted 18 graph variants**: four character/backbone modes, two sampling presets, both VAE choices, high-resolution adapter combinations, and edit graphs. Temporary empty files supplied model **names only**; no full model weights were loaded.
+- Executed the **real native `TextEncodeMOSSImageEdit` node** with CPU tensors and stub CLIP/VAE objects. Verified expansion of `images.image_0`, reference vision downscaling, and `index_timestep_zero_isolated` latent conditioning. This tests wiring, not learned inference.
+- Read only public safetensors headers and checked native loader keys/shapes against a meta-device MOSS model: HiRes v0.4 **120** adapters, CharRef v2 **252**, Edit HQ armV6 **252**. All mapped to native patches. This is separate from the earlier Marian LoRA's 252-adapter check.
+- Started the actual ComfyUI on CPU via `launch_comfy.py`. Authenticated ComfyUI, `/studio/`, Studio bootstrap, MOSS edit-node discovery, saved workflows, WebSocket status and process shutdown passed.
+- Headless Chrome at **1440px desktop and 390px iPhone width**: editing and autosave/reload, vertical Japanese preview, PNG download, page and sequential panel jobs, closing the page while generation continued, reconnecting to results, adopting panels with clean gutters, crop-edit controls and saved targets passed. Extra browser checks covered reference upload, loss of the HTTP response after job acceptance followed by an idempotent retry, and drag-to-move persistence. **Images in these UI tests were synthetic fixtures, not MOSS-generated manga.** No JavaScript page errors or mobile horizontal overflow were detected. Preview/export screenshots were visually inspected.
+- Downloaded and SHA256-verified the pinned Japanese Noto font and OFL license. SVGs embed the font/license; ZIPs also include `OFL.txt`. Python/JavaScript/Bash syntax and `git diff --check` passed.
+
+Reproduce the native graph check:
+
+```bash
+python tests/validate_comfy_studio.py --comfy /workspace/moss-image-runtime/ComfyUI
+```
+
+To include the Japanese rendering integration in the unit suite, set `MOSS_TEST_FONT` to the downloaded `studio/fonts/NotoSansCJKjp-Regular.otf`, with `OFL.txt` beside it. That one test is skipped if the font is not provided; the other tests do not download anything.
+
+Not verified: actual iOS Safari/WebKit, Linux/RunPod process detachment, RunPod external proxy behavior, full download of optional weights, full-weight CUDA generation/editing, model combinations' visual quality, identity consistency across manga panels, VRAM or speed. The high-resolution adapter and CharRef/Edit HQ are optional tools, not evidence that a first generation will achieve final artwork quality. No paid Pod was created or used for this implementation.

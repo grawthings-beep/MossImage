@@ -1,0 +1,42 @@
+{
+  "hires": {
+    "repo": "comfyanonymous/MOSS_image_MAX_ULTRA_hires_lora_test",
+    "revision": "67841316197079670315d2dc1eaacac6afd4591a",
+    "file": "moss_hires_lora_test_v0.4.safetensors",
+    "destination": "loras/moss_hires_lora_test_v0.4.safetensors",
+    "size": 182195248,
+    "sha256": "62fc0029ef8b8e434a1616eec7e348ffd058f6c6fca74c9b79254f911befedc1"
+  },
+  "charref": {
+    "repo": "7err4/MOSS-Image-CharRef",
+    "revision": "70db7d88c478bff21c86a3709673d17655f6e162",
+    "file": "moss_image_charref_v2.safetensors",
+    "destination": "loras/moss_image_charref_v2.safetensors",
+    "size": 148697656,
+    "sha256": "1a77e98228242d7ca79dd01df737d751f211f2ae676f16cce664987dbf0bac05"
+  },
+  "sft": {
+    "repo": "Comfy-Org/MOSS-Image",
+    "revision": "530a4c94f92c35ef6818b1b035a983fe9dcf5f54",
+    "file": "diffusion_models/moss_image_sft_bf16.safetensors",
+    "destination": "diffusion_models/moss_image_sft_bf16.safetensors",
+    "size": 10164655808,
+    "sha256": "f96738d8116d78b7316b57c663d8c98591ddafab7488f48e3099b7655e34ab6f"
+  },
+  "edit": {
+    "repo": "akhaliq/MOSS-Image-Edit-HQ",
+    "revision": "9c8754bfed62e07f69c6c3ba65a1b12ba5268d6a",
+    "file": "weights/armV6/armV6.safetensors",
+    "destination": "loras/moss_edit_armV6.safetensors",
+    "size": 495514936,
+    "sha256": "21c5758150c78bc2afd7c0c499b22775d7f1c345c940e30ed3e6ef036023112c"
+  },
+  "full_vae": {
+    "repo": "Comfy-Org/MOSS-Image",
+    "revision": "530a4c94f92c35ef6818b1b035a983fe9dcf5f54",
+    "file": "vae/flux2-vae.safetensors",
+    "destination": "vae/flux2-vae.safetensors",
+    "size": 336211292,
+    "sha256": "868fe7b343cc8f3a19dbcfcafbc3d5f888802be3f89bd81b65b3621a066ce8f3"
+  }
+}

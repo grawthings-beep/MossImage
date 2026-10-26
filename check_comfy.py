@@ -21,8 +21,8 @@ def main():
     assert hasattr(CLIPType, "MOSS_IMAGE"), "ComfyUI has no native MOSS support."
     assert "moss_image" in nodes.CLIPLoader.INPUT_TYPES()["required"]["type"][0]
 
-    # Only these two built-in extensions are used; no custom-node dependencies.
-    for module_name in ("comfy_extras.nodes_flux", "comfy_extras.nodes_slg"):
+    # The single-image workflow and Manga Studio use native nodes only.
+    for module_name in ("comfy_extras.nodes_flux", "comfy_extras.nodes_slg", "comfy_extras.nodes_moss_image"):
         module = importlib.import_module(module_name)
         extension = asyncio.run(module.comfy_entrypoint())
         for node in asyncio.run(extension.get_node_list()):
@@ -32,6 +32,8 @@ def main():
     )
     for node in workflow["nodes"]:
         assert node["type"] in nodes.NODE_CLASS_MAPPINGS, node["type"]
+    assert 'TextEncodeMOSSImageEdit' in nodes.NODE_CLASS_MAPPINGS
+    assert 'LoadImage' in nodes.NODE_CLASS_MAPPINGS
     print("Native MOSS loaders and all workflow nodes: OK")
 
 

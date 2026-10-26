@@ -32,7 +32,7 @@ def forwarded_headers(headers):
     )
 
 
-def proxy_app(upstream, login):
+def proxy_app(upstream, login, runtime=None):
     expected = BasicAuth(login["username"], login["password"]).encode()
 
     @web.middleware
@@ -97,6 +97,9 @@ def proxy_app(upstream, login):
             await result.write_eof()
             return result
 
+    if runtime is not None:
+        from studio.api import mount
+        mount(app, runtime, upstream)
     app.router.add_route("*", "/{path:.*}", proxy)
     return app
 
@@ -132,7 +135,7 @@ async def serve(args):
                 await asyncio.sleep(1)
             else:
                 raise RuntimeError("ComfyUI startup timed out. See the UI log.")
-        runner = web.AppRunner(proxy_app(upstream, login), access_log=None)
+        runner = web.AppRunner(proxy_app(upstream, login, runtime), access_log=None)
         await runner.setup()
         await web.TCPSite(runner, args.host, args.port).start()
         print(f"Login user: {login['username']}\nLogin password: {login['password']}", flush=True)
@@ -140,6 +143,7 @@ async def serve(args):
         address = (f"https://{pod_id}-{args.port}.proxy.runpod.net"
                    if pod_id else f"http://127.0.0.1:{args.port}")
         print(f"Open: {address}", flush=True)
+        print(f"Manga Studio: {address}/studio/", flush=True)
         print("Workflows -> moss_marian_queen2 -> Run", flush=True)
         print(f"Images: {comfy / 'output' / 'MOSS'}", flush=True)
         code = await process.wait()
