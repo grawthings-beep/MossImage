@@ -26,6 +26,36 @@ launch = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(launch)
 
 
+class RuntimeSetupTests(unittest.TestCase):
+    def test_vision_checked_before_trainer_imports_even_for_ready_venv(self):
+        for already_ready in (False, True):
+            with self.subTest(already_ready=already_ready), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp)
+                constraints = root / "cuda-constraints.txt"
+                constraints.write_bytes(b"torch==2.9.1+cu128\n")
+                identity = hashlib.sha256((TRAINING / "requirements.txt").read_bytes()
+                    + constraints.read_bytes() + (TRAINING / "revisions.json").read_bytes()).hexdigest()[:16]
+                venv = root / "venvs" / identity
+                python = venv / "bin" / "python"
+                python.parent.mkdir(parents=True)
+                python.touch()
+                if already_ready:
+                    (venv / "moss-ready.json").write_text("{}")
+                with mock.patch.object(runtime.subprocess, "run") as run, \
+                        mock.patch.object(runtime, "sources", return_value=root / "sources"):
+                    runtime.setup(root)
+                commands = [call.args[0] for call in run.call_args_list]
+                vision_index = commands.index([str(python), str(TRAINING / "ensure_torchvision.py")])
+                cuda_index = commands.index([str(python), str(runtime.KIT / "check_runtime.py")])
+                imports_index = commands.index([str(python), str(Path(runtime.__file__)), "check"])
+                self.assertLess(vision_index, cuda_index)
+                self.assertLess(cuda_index, imports_index)
+                installs = [i for i, cmd in enumerate(commands) if "install" in cmd]
+                self.assertEqual(len(installs), 0 if already_ready else 1)
+                if installs:
+                    self.assertLess(installs[0], vision_index)
+
+
 class BundleTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

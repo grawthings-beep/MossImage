@@ -33,6 +33,8 @@ bash /workspace/MossImage/background.sh --stop
 
 `start.sh` は画像生成用です。学習だけの場合、起動する必要はありません。学習用環境は最初のジョブで自動準備します。`runpodctl receive` がなければ、x86_64のPodでは固定版2.14.0をSHA256検証付きで取得します。
 
+Podに `torchvision` がない場合は、既存のPyTorch・CUDAに対応する公式バイナリだけを学習用venvに追加します（例: torch 2.9.1+cu128 → torchvision 0.24.1+cu128）。`--no-deps` でPyTorchの入れ替えを防ぎ、画像変換とCPU拡張を実行してから学習のインポート・CUDA検査へ進みます。既存のtorchvisionが壊れている場合や対応表にない組み合わせは、自動で置き換えず停止します。以前の `No module named 'torchvision'` で止まったジョブは、repo更新後に `resume` で再開できます。データセットの再送は不要です。
+
 ## PC側: データセットをまとめて送る
 
 PCにPython 3.12以上と `runpodctl.exe` が必要です。既存のAnima用 `runpodctl.exe` を使えます。送信前にPodで上のrepo準備を済ませてください。

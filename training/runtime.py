@@ -105,6 +105,7 @@ def setup(root):
         subprocess.run([str(python), "-m", "pip", "install", "--constraint", str(constraints),
                         "-r", str(HERE / "requirements.txt")], check=True)
     # Check again even if the environment was prepared in a previous session.
+    subprocess.run([str(python), str(HERE / "ensure_torchvision.py")], check=True)
     subprocess.run([str(python), str(KIT / "check_runtime.py")], check=True)
     subprocess.run([str(python), str(Path(__file__)), "check"], check=True)
     source = sources(root)
