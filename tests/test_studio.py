@@ -75,7 +75,7 @@ class SchemaTests(unittest.TestCase):
         self.assertEqual([n['inputs']['steps'] for n in graph.values() if n['class_type']=='KSampler'], [50])
         graph, _ = build_graph(pg, 'edit', 512,512,42,'test','reference.png',edit=True)
         self.assertEqual(graph['1']['inputs']['unet_name'], 'moss_image_sft_bf16.safetensors')
-        self.assertEqual([n['inputs']['lora_name'] for n in graph.values() if n['class_type']=='LoraLoaderModelOnly'], ['moss_edit_armV6.safetensors'])
+        self.assertEqual([n['inputs']['lora_name'] for n in graph.values() if n['class_type']=='LoraLoaderModelOnly'], ['moss_edit_armV5.safetensors'])
 
     def test_project_revision_prevents_overwriting_another_tab(self):
         with tempfile.TemporaryDirectory() as root:
@@ -393,13 +393,16 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
         (folder/(unit['prompt_id']+'.jpg')).unlink()
         self.assertEqual((await self.client.get(route, auth=self.auth)).status, 404)
 
-    async def test_home_and_ready_point_to_image_ui_and_scarlet_manga_preset(self):
-        response = await self.client.get('/', auth=self.auth, allow_redirects=False)
-        self.assertEqual(response.headers['Location'], '/studio/image')
+    async def test_retired_ui_redirects_and_saved_project_apis_remain_available(self):
         self.assertEqual((await self.client.get('/studio/image')).status, 401)
-        self.assertEqual((await self.client.get('/studio/image', auth=self.auth)).status, 200)
+        for path in ('/studio', '/studio/', '/studio/image'):
+            response = await self.client.get(path, auth=self.auth, allow_redirects=False)
+            self.assertEqual(response.status, 302)
+            self.assertEqual(response.headers['Location'], '/')
+        self.assertEqual((await self.client.get('/studio/app.js', auth=self.auth)).status, 410)
         ready = await (await self.client.get('/startup/status', auth=self.auth)).json()
         self.assertTrue(ready['ready'])
+        self.assertEqual(ready['url'], '/')
         response = await self.client.post('/studio/api/projects', auth=self.auth, headers=self.headers, json={'character':'scarlet'})
         p = await response.json()
         self.assertEqual(p['trigger'], 'sc4rl3tg0d')

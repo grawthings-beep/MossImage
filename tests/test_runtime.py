@@ -4,6 +4,7 @@ import struct
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from aiohttp import BasicAuth, WSServerHandshakeError, web
 from aiohttp.test_utils import TestClient, TestServer
@@ -11,10 +12,22 @@ from aiohttp.test_utils import TestClient, TestServer
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from launch import credentials
 from launch_comfy import proxy_app
-from prepare_comfy import install_workflow, valid_weights
+from prepare_comfy import install_workflow, valid_weights, prepare_image_tools
 
 
 class FileTests(unittest.TestCase):
+    def test_native_workflows_prepare_all_required_models_and_preserve_saved_edits(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with patch('studio.assets.Downloads.ensure') as ensure:
+                prepare_image_tools(root)
+                self.assertEqual([call.args[0] for call in ensure.call_args_list], ['charref','sft','edit'])
+                files = sorted((root/'ComfyUI/user/default/workflows').glob('MOSS_0*.json'))
+                self.assertEqual(len(files), 4)
+                files[-1].write_text('{"user_edit": true}')
+                prepare_image_tools(root)
+                self.assertEqual(json.loads(files[-1].read_text()), {'user_edit': True})
+
     def test_truncated_download_is_not_accepted(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "test.safetensors"
@@ -62,6 +75,7 @@ class ProxyTests(unittest.IsolatedAsyncioTestCase):
             return socket
 
         upstream = web.Application()
+        upstream.router.add_get('/', echo)
         upstream.router.add_route("*", "/echo", echo)
         upstream.router.add_get("/ws", websocket)
         self.upstream = TestServer(upstream)
@@ -72,6 +86,19 @@ class ProxyTests(unittest.IsolatedAsyncioTestCase):
         )))
         await self.client.start_server()
         self.auth = BasicAuth("moss", "test-password")
+
+    async def test_native_comfy_home_is_forwarded_even_with_legacy_runtime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            client = TestClient(TestServer(proxy_app(str(self.upstream.make_url('')).rstrip('/'),
+                {'username':'moss','password':'test-password'}, directory)))
+            await client.start_server()
+            try:
+                response = await client.get('/', auth=self.auth, allow_redirects=False)
+                self.assertEqual(response.status, 200)
+                self.assertEqual((await response.json())['path'], '/')
+                self.assertNotIn('Location', response.headers)
+            finally:
+                await client.close()
 
     async def asyncTearDown(self):
         await self.client.close()

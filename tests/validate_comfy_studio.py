@@ -5,12 +5,14 @@ python tests/validate_comfy_studio.py --comfy /path/to/ComfyUI
 import argparse
 import asyncio
 import importlib
+import json
 from pathlib import Path
 import sys
 import tempfile
 
 parser=argparse.ArgumentParser()
 parser.add_argument('--comfy',required=True,type=Path)
+parser.add_argument('--prompts',type=Path,help='Optional map of API prompts exported by the real ComfyUI frontend')
 args=parser.parse_args()
 sys.path.insert(0,str(args.comfy.resolve()))
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
@@ -29,7 +31,8 @@ from studio.assets import PINS
 
 
 async def main():
-    for name in ('comfy_extras.nodes_flux','comfy_extras.nodes_slg','comfy_extras.nodes_moss_image'):
+    for name in ('comfy_extras.nodes_flux','comfy_extras.nodes_slg','comfy_extras.nodes_moss_image',
+                 'comfy_extras.nodes_images','comfy_extras.nodes_post_processing'):
         extension=await importlib.import_module(name).comfy_entrypoint()
         for cls in await extension.get_node_list():
             nodes.NODE_CLASS_MAPPINGS[cls.define_schema().node_id]=cls
@@ -44,6 +47,7 @@ async def main():
             folder_paths.add_model_folder_path(file.split('/')[0],str(path.parent))
         folder_paths.set_input_directory(str(root/'input')); (root/'input').mkdir()
         Image.new('RGB',(512,768),'white').save(root/'input/reference.png')
+        Image.new('RGB',(768,1024),'#456979').save(root/'input/native-workflow-fixture.png')
         count=0
         for route in ('marian','scarlet','reference','base','sft'):
             for sampling in ('quality','comfy'):
@@ -63,6 +67,17 @@ async def main():
             assert result[0],result
             count+=1
         print(f'PASS: {count} Studio graph variants accepted by native ComfyUI. Names/schema only; no weights executed.')
+        if args.prompts:
+            prompts=json.loads(args.prompts.read_text(encoding='utf-8'))
+            for name, graph in prompts.items():
+                result=await execution.validate_prompt(name,graph,None)
+                assert result[0],(name,result)
+            print(f'PASS: {len(prompts)} API prompts exported by the real frontend accepted by native ComfyUI.')
+            scaled=nodes.NODE_CLASS_MAPPINGS['ImageScaleToTotalPixels'].execute(
+                torch.zeros(1,1024,768,3), 'lanczos', 1.0, 16).result[0]
+            h,w=scaled.shape[1:3]
+            assert h%16==w%16==0 and abs(w/h-.75)<.02
+            print(f'PASS: native reference resizing on CPU: {w}x{h}, 16px aligned, original aspect ratio retained within rounding.')
         # Exercise the real edit node's dynamic input expansion and reference conditioning on CPU.
         encoder=nodes.NODE_CLASS_MAPPINGS['TextEncodeMOSSImageEdit']
         class Clip:

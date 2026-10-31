@@ -1,4 +1,4 @@
-"""Authenticated Manga Studio routes, mounted before the ComfyUI proxy."""
+"""Legacy saved-data APIs. Retired custom screens redirect to native ComfyUI."""
 import asyncio
 import copy
 import hmac
@@ -16,9 +16,6 @@ from .render import png_page, svg_page
 from .schema import default_project, validate_project, compile_prompt, ident, text
 from .store import Store, Conflict
 from .progress import elapsed
-
-STATIC = Path(__file__).with_name('web')
-
 
 def job_summary(job):
     return {k: v for k, v in job.items() if k not in ('snapshot', 'page', 'reference', 'units')} | {
@@ -99,16 +96,13 @@ def mount(app, runtime, upstream):
             store.asset_path(value)
 
     async def index(request):
-        return web.FileResponse(STATIC / 'index.html')
+        raise web.HTTPFound('/')
 
     async def image_index(request):
-        return web.FileResponse(STATIC / 'image.html')
+        raise web.HTTPFound('/')
 
     async def static(request):
-        name = request.match_info['name']
-        if name not in ('app.js', 'style.css', 'image.js', 'progress.js'):
-            raise web.HTTPNotFound()
-        return web.FileResponse(STATIC / name)
+        raise web.HTTPGone(text='The custom UI has been retired. Open / for ComfyUI.')
 
     async def bootstrap(request):
         projects = [p for p in store.list('project') if p.get('mode') != 'image']
@@ -279,7 +273,7 @@ def mount(app, runtime, upstream):
         raise web.HTTPNotFound()
 
     async def redirect(request):
-        raise web.HTTPFound('/studio/')
+        raise web.HTTPFound('/')
 
     app.router.add_get('/studio', redirect)
     app.router.add_get('/studio/', index)

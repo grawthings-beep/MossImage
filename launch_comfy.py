@@ -100,14 +100,8 @@ def proxy_app(upstream, login, runtime=None):
     if runtime is not None:
         from studio.api import mount
         mount(app, runtime, upstream)
-        async def home(request):
-            # Explicit opt-in preserves the raw ComfyUI entry point for saved users.
-            if request.query.get('comfy') == '1':
-                return await proxy(request)
-            raise web.HTTPFound('/studio/image')
         async def ready(request):
-            return web.json_response({'ready': True, 'url': '/studio/image'})
-        app.router.add_get('/', home)
+            return web.json_response({'ready': True, 'url': '/'})
         app.router.add_get('/startup/status', ready)
     app.router.add_route("*", "/{path:.*}", proxy)
     return app
@@ -124,6 +118,7 @@ async def serve(args):
         sys.executable, "-u", str(comfy / "main.py"),
         "--listen", "127.0.0.1", "--port", str(internal_port),
         "--disable-auto-launch", "--disable-all-custom-nodes",
+        "--preview-method", "latent2rgb",
     ]
     if args.cpu:
         command.append("--cpu")
@@ -152,8 +147,7 @@ async def serve(args):
         address = (f"https://{pod_id}-{args.port}.proxy.runpod.net"
                    if pod_id else f"http://127.0.0.1:{args.port}")
         print(f"Open: {address}", flush=True)
-        print(f"Manga Studio: {address}/studio/", flush=True)
-        print(f"Image generation: {address}/studio/image", flush=True)
+        print("Open ComfyUI Workflows and select MOSS_01 through MOSS_04.", flush=True)
         print(f"Images: {comfy / 'output' / 'MOSS'}", flush=True)
         code = await process.wait()
         if code:

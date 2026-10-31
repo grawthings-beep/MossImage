@@ -1,5 +1,7 @@
 # MOSS 漫画スタジオ
 
+> **2026-10-31: この専用画面は廃止しました。** 通常のComfyUIでノードのワークフローを使う構成です。現在の操作方法は [WORKFLOWS.md](WORKFLOWS.md) を参照してください。以下は旧機能の記録であり、現在の操作手順ではありません。旧URLはComfyUIへ転送され、既存画像・保存データは維持します。
+
 RunPodのHTTP Service 7860のURLに `/studio/` を付けて開きます。ComfyUIと同じログインです。起動は `bash background.sh`。モデルやvenvを含む独自Dockerイメージを作り直す必要はありません。このキットは起動時に固定版のComfyUI・依存を準備します。
 
 ## 最初の1ページ

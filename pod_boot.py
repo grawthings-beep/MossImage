@@ -17,7 +17,7 @@ from launch import credentials
 KIT = Path(__file__).resolve().parent
 PAGE = '''<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MOSS 起動中</title><style>body{background:#10191e;color:#edf4ee;font:16px/1.8 system-ui;margin:0;display:grid;min-height:100vh;place-items:center}main{max-width:560px;padding:32px}h1{font-size:28px}button{background:#b6e8b2;border:0;border-radius:8px;padding:14px 24px;font:inherit}small{color:#a6b8b9}</style>
-<main><h1>MOSSを準備しています</h1><p id="stage">起動確認中…</p><p>初回はモデルをダウンロードします。準備ができると画像生成画面へ移動します。</p><small>この画面を閉じても準備はPod側で続きます。</small><p><button id="retry" hidden>準備を再試行</button></p></main>
+<main><h1>MOSSを準備しています</h1><p id="stage">起動確認中…</p><p>初回はモデルをダウンロードします。準備ができるとComfyUIへ移動します。</p><small>この画面を閉じても準備はPod側で続きます。</small><p><button id="retry" hidden>準備を再試行</button></p></main>
 <script>const button=document.getElementById('retry');async function poll(){try{const r=await fetch('/startup/status',{cache:'no-store'});if(!r.ok)return;const s=await r.json();if(s.ready){location.replace(s.url);return;}document.getElementById('stage').textContent=s.message;button.hidden=!s.failed;button.onclick=async()=>{button.disabled=true;try{await fetch('/startup/retry',{method:'POST',headers:{'X-Moss-Boot':s.csrf}});}finally{button.disabled=false;}};}catch(e){}}poll();setInterval(poll,2500);</script></html>'''
 
 

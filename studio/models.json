@@ -25,11 +25,11 @@
   },
   "edit": {
     "repo": "akhaliq/MOSS-Image-Edit-HQ",
-    "revision": "9c8754bfed62e07f69c6c3ba65a1b12ba5268d6a",
-    "file": "weights/armV6/armV6.safetensors",
-    "destination": "loras/moss_edit_armV6.safetensors",
+    "revision": "ee1493ba577437e70b88bc4499b85cc7aa4594ca",
+    "file": "weights/armV5/armV5.safetensors",
+    "destination": "loras/moss_edit_armV5.safetensors",
     "size": 495514936,
-    "sha256": "21c5758150c78bc2afd7c0c499b22775d7f1c345c940e30ed3e6ef036023112c"
+    "sha256": "1fbfae4eaaafc62c66a298e63e16fc5211566e1e3de1c58f83c35c6bc226c9f9"
   },
   "full_vae": {
     "repo": "Comfy-Org/MOSS-Image",

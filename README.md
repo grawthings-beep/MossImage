@@ -1,12 +1,12 @@
 # MOSS-Image + LoRA on RunPod
 
-このrepoを起動すると、MOSS対応版ComfyUI・MOSS-Image Base・マリアン：クイーンと紅蓮：神殺のLoRA・生成画面をまとめて準備します。画像生成の既定は **1152×1536・25ステップ** です。
+このrepoを起動すると、MOSS対応版ComfyUI・MOSS-Image Base・マリアン：クイーンと紅蓮：神殺のLoRA・キャラ参照・画像編集をまとめて準備します。通常生成とキャラ参照の既定は **1152×1536・25ステップ** です。
 
-**毎回コマンドを入力せずに使う:** [RunPodテンプレートの自動起動設定](RUNPOD.md)を一度保存してください。以降はPod起動後に **Connect → 7860** を開くだけ。準備中も同じURLに状態を表示し、取得完了後に画像生成画面へ移ります。`MOSS_PASSWORD` を設定すれば、ログからパスワードを探す必要もありません。
+**毎回コマンドを入力せずに使う:** [RunPodテンプレートの自動起動設定](RUNPOD.md)を一度保存してください。以降はPod起動後に **Connect → 7860** を開くだけ。準備中も同じURLに状態を表示し、取得完了後に通常のComfyUIへ移ります。`MOSS_PASSWORD` を設定すれば、ログからパスワードを探す必要もありません。
 
-**生成中の進み具合:** 画像・漫画の両画面で、モデル準備／描画／仕上げ／保存の状態、経過時間、実際の **8 / 25ステップ・32%** のような進捗、途中プレビューを表示します。割合は描画ステップの進捗で、残り時間の予測ではありません。Safariを離れても生成は続き、開き直すと保存済みの進捗から表示を再開します。途中プレビューは軽量な近似表示で、完成PNGとは異なります。
+**操作はComfyUIのノードで行います。** 漫画スタジオと独自の画像生成画面は廃止しました。旧URLもComfyUIへ移動します。実行中のノード・ステップ進捗はComfyUI標準表示を使い、軽量な途中プレビューを起動時に有効にします。
 
-**漫画を作る場合:** 起動後のURLの末尾に **`/studio/`** を付けると、同じログインで「漫画スタジオ」を使えます。コマ割りを公式形式のJSONに変換し、全体生成／コマ別生成、参照画像、部分修正、日本語の縦書き、PNG・SVG保存に対応。[使い方とモデル構成](MANGA.md)。
+用意済みの4つのJSONと使い方は [WORKFLOWS.md](WORKFLOWS.md)。既存の画像・保存データは削除しません。
 
 **LoRAを作る場合:** [PCから送信してRunPodで自動学習する手順](TRAINING.md)。画像とキャプションをまとめて送り、Podに1行貼ると受信・Pre-Cache・学習・保存までバックグラウンドで進みます。
 
@@ -26,7 +26,7 @@ PodのTerminalで、この1行を実行します。
 cd /workspace && git clone https://github.com/grawthings-beep/MossImage.git && cd MossImage && bash background.sh
 ```
 
-CUDA実演算の確認 → MOSS対応ComfyUIの固定版を取得 → 依存の確認 → LoRAとモデルの取得 → ログイン付きComfyUI起動、の順で進みます。モデルは合計約30GBです。初回はダウンロードに時間がかかります。
+CUDA実演算の確認 → MOSS対応ComfyUIの固定版を取得 → 依存の確認 → LoRAとモデルの取得 → ログイン付きComfyUI起動、の順で進みます。通常生成用の約30GBに加え、参照・編集用に約10.8GB取得します。初回はダウンロードに時間がかかります。
 
 この起動方法はバックグラウンドで動くため、iPhoneのSafariやターミナルを閉じてもセットアップ・生成が続きます。**HF_TOKENを設定済み**、またはLoRAを配置済みで使用してください。初回の進行とログイン情報を表示:
 
@@ -34,7 +34,7 @@ CUDA実演算の確認 → MOSS対応ComfyUIの固定版を取得 → 依存の�
 tail -n 80 -f /workspace/moss-image-runtime/logs/background.log
 ```
 
-ログの **Login user / Login password** を使い、RunPodの **Connect → HTTP Service 7860** を開きます。漫画スタジオはそのURLの末尾に **`/studio/`** を付けて開きます。`tail`の終了はCtrl+Cで、サーバーは継続します。対話的なトークン入力が必要な場合は、従来どおり `bash start.sh` を使えます。
+ログの **Login user / Login password** を使い、RunPodの **Connect → HTTP Service 7860** を開きます。`tail`の終了はCtrl+Cで、サーバーは継続します。対話的なトークン入力が必要な場合は、従来どおり `bash start.sh` を使えます。
 
 すでにこのrepoを取得している場合は、停止してから更新します。
 
@@ -66,14 +66,14 @@ cd /workspace/MossImage && bash background.sh
 
 ## 3. 生成する
 
-1. **Connect → 7860** の画像生成画面で、紅蓮：神殺／マリアン：クイーンを選ぶ。
-2. 場面・ポーズ・衣装・演出のプロンプトを編集して **画像を生成**。キャラのトリガーと基本の外見は自動で追加される。
-3. 生成履歴で画像を確認し、**PNGを保存**。設定・プロンプトも取得できる。
-4. 漫画は右上の **漫画スタジオ** へ。ComfyUIのノードを直接操作する場合は、そこから **ComfyUI** を開く。
+1. **Connect → 7860** で通常のComfyUIを開く。
+2. **Workflows** から `MOSS_01`～`MOSS_04` のいずれかを開く。
+3. テキストノードでプロンプトを変更。参照・編集の場合は **Load Image** で画像をアップロード。
+4. **Run / Queue** で実行。**Save Image** に完成画像が表示され、PNGが自動保存される。
 
-ComfyUIには [マリアン用JSON](workflows/moss_marian_queen2_1152x1536_25.json) と [紅蓮用JSON](workflows/moss_scarlet_goddeath_1152x1536_25.json) を配置します。以前の保存済みワークフローは上書きせず残します。
+通常生成2種類・CharRef・Edit HQ v5のワークフローを自動配置します。参照・編集用の追加モデルも起動時に取得します（追加約10.8GB）。以前の保存済みワークフローは上書きせず残します。
 
-初期値は学習と同じ **MOSS-Image Base（BF16）**、テキストエンコーダーBF16、LoRA強度1.0、**1152×1536、25 steps、CFG 2.5、er_sde / simple、SLG layer 22を前半50%に適用**。seedは比較用に42です。別構図を出すときは「シードを変更」を使います。
+通常生成の初期値は学習と同じ **MOSS-Image Base（BF16）**、テキストエンコーダーBF16、LoRA強度1.0、**1152×1536、25 steps、CFG 2.5、er_sde / simple、SLG layer 22を前半50%に適用**。seedは比較用に42です。別の候補を出すときはKSamplerのseedを変更します。画像編集はSFT＋Edit HQ v5で、元画像の縦横比を保つ約1MP出力です。
 
 これらは初期値です。顔・衣装の再現品質を保証するものではなく、実際の生成結果で確認します。
 
@@ -87,10 +87,10 @@ ComfyUIには [マリアン用JSON](workflows/moss_marian_queen2_1152x1536_25.js
 | ログイン情報 | /workspace/moss-image-runtime/login.json |
 | セットアップログ | /workspace/moss-image-runtime/logs/comfy-setup.log |
 | UIログ | /workspace/moss-image-runtime/logs/comfy-ui.log |
-| 漫画の作品・生成キュー・画像・フォント | /workspace/moss-image-runtime/studio/ |
+| 旧画面の保存データ（保持） | /workspace/moss-image-runtime/studio/ |
 | バックグラウンド起動ログ | /workspace/moss-image-runtime/logs/background.log |
 
-作業後はPodをStopします。Podの停止・削除と、Safariを閉じる操作は別です。必要な画像・作品ZIPはストレージ削除前に保存してください。稼働中の旧サーバーは `git pull` だけでは更新されません。生成の完了後に旧プロセスを止め、更新したコードで起動してください。
+作業後はPodをStopします。必要な画像・ワークフローはストレージ削除前に保存してください。稼働中の旧サーバーは `git pull` だけでは更新されません。生成の完了後に更新・再起動してください。
 
 ## 実装と検証
 

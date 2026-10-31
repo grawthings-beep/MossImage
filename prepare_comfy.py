@@ -75,6 +75,18 @@ def install_workflow(comfy, pins):
     print(f"Workflow: {destination} (existing edits are preserved)")
 
 
+def prepare_image_tools(runtime):
+    # Native workflows cannot trigger the retired Studio's on-demand downloader.
+    # Download their pinned models before handing the browser to ComfyUI.
+    from studio.assets import Downloads
+    downloads = Downloads(runtime)
+    for name, label in [('charref', 'キャラ参照モデル'), ('sft', '画像編集のSFTモデル'), ('edit', '画像編集アダプター v5')]:
+        print(f'MOSS_STAGE={label}を準備しています', flush=True)
+        downloads.ensure(name)
+    for workflow in sorted((KIT / 'workflows').glob('MOSS_0*.json')):
+        install_workflow(Path(runtime) / 'ComfyUI', {'workflow_file': workflow.name})
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--runtime", required=True, type=Path)
@@ -114,7 +126,9 @@ def main():
     install_workflow(comfy, pins)
     for character in CHARACTERS.values():
         install_workflow(comfy, {'workflow_file': character['workflow']})
-    print("MOSS-Image Base + Marian Queen / Scarlet Goddeath LoRAs are ready.")
+    prepare_image_tools(args.runtime)
+    print("MOSS_STAGE=通常生成・キャラ参照・画像編集のワークフローを配置しました")
+    print("MOSS-Image Base + character LoRAs + CharRef + Edit HQ v5 are ready.")
 
 
 if __name__ == "__main__":

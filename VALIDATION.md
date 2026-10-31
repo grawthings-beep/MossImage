@@ -122,3 +122,18 @@ Added a per-prompt ComfyUI WebSocket observer and a shared image/manga progress 
 - Executed the pinned native Flux2 `Latent2RGBPreviewer` on random CPU latents, serialized its image with the real `PromptServer.send_image_with_metadata`, and decoded/persisted that binary frame through the Studio observer. The resulting JPEG was 384×512. This verifies the preview conversion/wire path, not trained model inference. JavaScript syntax and `git diff --check` passed.
 
 Not verified: full-weight CUDA generation/preview performance or deployment to the user's running Pod. Updating an already running server requires a restart after its current work finishes.
+
+## Native ComfyUI workflows replace custom screens — 2026-10-31
+
+At the user's request, retired the Manga Studio and mobile-oriented custom image screens. Port 7860 now serves native ComfyUI at `/`; the startup handoff points there and old screen URLs redirect there. Removed the custom frontend files. Existing stored images/projects and authenticated compatibility APIs remain available; no user data is deleted. Native latent2rgb previews are enabled at launch.
+
+Added four saved, editable node workflows: Scarlet and Marian text generation, CharRef v2 reference generation, and SFT + Edit HQ v5 image editing. Defaults are 25 steps; text/reference output is 1152×1536, while editing scales the source to approximately 1MP with its aspect ratio and 16px alignment. Both conditioning branches receive the reference and VAE with the native ai-toolkit layout. Setup now downloads and verifies CharRef, SFT and the edit adapter before opening ComfyUI, and installs all four workflows without overwriting user edits. The v5 revision, size and SHA256 were verified against the author's public Hugging Face API; old v6 files are not deleted.
+
+Verified locally:
+
+- **53 unit/integration tests passed**, including authenticated native-root proxying, old-screen redirects, retained data APIs, preparation of the three additional model dependencies, and preservation of user-edited workflows.
+- Started the pinned real ComfyUI on CPU behind the same authentication proxy. Headless desktop Chrome loaded all four JSONs and exported API prompts through the actual frontend, with no missing node types or JavaScript page errors. Reference-image and VAE connections, blank negative text and 25-step settings survived serialization. Screenshots were inspected; initial zoom was increased so node labels remain visible, and node spacing was adjusted.
+- All **four frontend-exported prompts passed the real native ComfyUI validator**, alongside the 22 existing graph variants. Model files in this check were empty name fixtures only. Real reference resizing ran on CPU (768×1024 → 880×1184), and the native edit node's dynamic image/conditioning test passed with stub CLIP/VAE objects.
+- `git diff --check` passed. Workflow generation uses only the standard library and can be reproduced with `python scripts/build_native_workflows.py`.
+
+Not verified: full model downloads on the user's Pod, CUDA image generation, v5 learned quality or 25-vs-50-step quality. No remote Pod/template was changed and no paid GPU was started. Native ComfyUI now owns new generation requests; the retired custom screen's browser draft/persistent-queue UI is no longer the workflow.

@@ -1,0 +1,568 @@
+{
+  "id": "d468a6ca-a252-5ce9-8e79-2af6eca2c7df",
+  "revision": 0,
+  "last_node_id": 11,
+  "last_link_id": 11,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "UNETLoader",
+      "pos": [
+        30,
+        80
+      ],
+      "size": [
+        350,
+        90
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "title": "MOSS-Image Base（学習と同じモデル）",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UNETLoader",
+        "models": [
+          {
+            "name": "moss_image_base_bf16.safetensors",
+            "directory": "diffusion_models",
+            "url": "https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/diffusion_models/moss_image_base_bf16.safetensors"
+          }
+        ]
+      },
+      "widgets_values": [
+        "moss_image_base_bf16.safetensors",
+        "default"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "CLIPLoader",
+      "pos": [
+        30,
+        300
+      ],
+      "size": [
+        350,
+        120
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "title": "MOSS テキストエンコーダー",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            4,
+            5
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "qwen3.5_9b_bf16.safetensors",
+            "directory": "text_encoders",
+            "url": "https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/text_encoders/qwen3.5_9b_bf16.safetensors"
+          }
+        ]
+      },
+      "widgets_values": [
+        "qwen3.5_9b_bf16.safetensors",
+        "moss_image",
+        "default"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "VAELoader",
+      "pos": [
+        30,
+        540
+      ],
+      "size": [
+        350,
+        65
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "title": "VAE",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            10
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAELoader",
+        "models": [
+          {
+            "name": "flux2-vae_small.safetensors",
+            "directory": "vae",
+            "url": "https://huggingface.co/Comfy-Org/MOSS-Image/resolve/main/vae/flux2-vae_small.safetensors"
+          }
+        ]
+      },
+      "widgets_values": [
+        "flux2-vae_small.safetensors"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "CLIPTextEncode",
+      "pos": [
+        820,
+        80
+      ],
+      "size": [
+        470,
+        260
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "title": "ここで衣装・背景を変更（トリガーは残す）",
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            6
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "sc4rl3tg0d, An adult woman with long pale silver-lavender hair in a half updo, a hair ornament and a red ribbon. She wears a sleeveless black Japanese-inspired dress with red trim and side slits, a red scarf, long black gloves, bandages on her arm, and black tights.\nA detailed anime illustration. She stands beneath a ruined shrine gate after the rain, calm and determined, one hand near her sheathed katana. Low three-quarter camera angle, scarf and hair drifting in the wind, wet stone reflecting deep red lantern light, layered mist and distant shrine architecture, crisp linework, dramatic rim lighting, intricate original costume details. One complete illustration, no panels, no lettering."
+      ]
+    },
+    {
+      "id": 5,
+      "type": "CLIPTextEncode",
+      "pos": [
+        820,
+        410
+      ],
+      "size": [
+        470,
+        150
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "title": "Negative Prompt",
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 5
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            7
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "nsfw, worst quality, bad anatomy, watermark, jpeg artifact"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "EmptyFlux2LatentImage",
+      "pos": [
+        820,
+        640
+      ],
+      "size": [
+        300,
+        120
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "title": "画像サイズ：1152 × 1536",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            8
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EmptyFlux2LatentImage"
+      },
+      "widgets_values": [
+        1152,
+        1536,
+        1
+      ]
+    },
+    {
+      "id": 7,
+      "type": "KSampler",
+      "pos": [
+        1360,
+        80
+      ],
+      "size": [
+        350,
+        485
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "title": "生成設定：25 steps / CFG 2.5",
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 3
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 6
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 7
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            9
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        42,
+        "fixed",
+        25,
+        2.5,
+        "er_sde",
+        "simple",
+        1
+      ]
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [
+        1790,
+        80
+      ],
+      "size": [
+        240,
+        70
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "title": "画像に変換",
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 9
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            11
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "pos": [
+        2090,
+        80
+      ],
+      "size": [
+        540,
+        740
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "title": "生成画像（自動保存）",
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 11
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "MOSS/scarlet"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        420,
+        80
+      ],
+      "size": [
+        340,
+        105
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "title": "紅蓮：神殺 LoRA",
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            2
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly",
+        "models": [
+          {
+            "name": "MossImage_scarlet_goddeath.safetensors",
+            "directory": "loras",
+            "url": "https://huggingface.co/uwgm/Moss/resolve/main/MossImage_scarlet_goddeath.safetensors"
+          }
+        ]
+      },
+      "widgets_values": [
+        "MossImage_scarlet_goddeath.safetensors",
+        1
+      ]
+    },
+    {
+      "id": 11,
+      "type": "SkipLayerGuidanceDiTSimple",
+      "pos": [
+        420,
+        300
+      ],
+      "size": [
+        340,
+        160
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "title": "SLG：22 / 前半50%",
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SkipLayerGuidanceDiTSimple"
+      },
+      "widgets_values": [
+        "",
+        "22",
+        0,
+        0.5
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      10,
+      0,
+      "MODEL"
+    ],
+    [
+      2,
+      10,
+      0,
+      11,
+      0,
+      "MODEL"
+    ],
+    [
+      3,
+      11,
+      0,
+      7,
+      0,
+      "MODEL"
+    ],
+    [
+      4,
+      2,
+      0,
+      4,
+      0,
+      "CLIP"
+    ],
+    [
+      5,
+      2,
+      0,
+      5,
+      0,
+      "CLIP"
+    ],
+    [
+      6,
+      4,
+      0,
+      7,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      7,
+      5,
+      0,
+      7,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      8,
+      6,
+      0,
+      7,
+      3,
+      "LATENT"
+    ],
+    [
+      9,
+      7,
+      0,
+      8,
+      0,
+      "LATENT"
+    ],
+    [
+      10,
+      3,
+      0,
+      8,
+      1,
+      "VAE"
+    ],
+    [
+      11,
+      8,
+      0,
+      9,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.8,
+      "offset": [
+        100,
+        150
+      ]
+    }
+  },
+  "version": 0.4
+}

@@ -14,7 +14,7 @@ def build_graph(page, prompt, width, height, seed, prefix, reference=None, edit=
     clip = add('CLIPLoader', clip_name='qwen3.5_9b_bf16.safetensors', type='moss_image', device='default')
     vae = add('VAELoader', vae_name='flux2-vae.safetensors' if page['vae'] == 'full' else 'flux2-vae_small.safetensors')
     if edit:
-        model = add('LoraLoaderModelOnly', model=model, lora_name='moss_edit_armV6.safetensors', strength_model=1.0)
+        model = add('LoraLoaderModelOnly', model=model, lora_name='moss_edit_armV5.safetensors', strength_model=1.0)
     elif page['route'] in CHARACTERS:
         model = add('LoraLoaderModelOnly', model=model, lora_name=CHARACTERS[page['route']]['file'], strength_model=page['lora_strength'])
     elif page['route'] == 'reference':
