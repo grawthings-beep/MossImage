@@ -1,4 +1,4 @@
-"""Rebuild the four native ComfyUI workflows (stdlib only; no model execution)."""
+"""Rebuild native ComfyUI workflows (stdlib only; no model execution)."""
 import copy
 import json
 from pathlib import Path
@@ -79,6 +79,39 @@ def reference_workflow(base, edit=False):
     return data
 
 
+def cotton_workflow(base, character=None):
+    data = copy.deepcopy(base)
+    nodes = {n['id']: n for n in data['nodes']}
+    nodes[1]['title'] = 'CottonMoss Turbo INT8'
+    nodes[1]['widgets_values'] = ['cottonmoss_baseTurboTestInt8.safetensors', 'default']
+    nodes[1]['properties'].pop('models', None)
+    nodes[7]['widgets_values'][2:6] = [12, 3.0, 'er_sde', 'simple']
+    nodes[7]['title'] = '生成設定：12 steps / CFG 3（作者推奨）'
+    quality = 'masterpiece, best quality, highres, absurdres, '
+    if not character:
+        nodes[4]['title'] = 'プロンプト（先頭の品質タグを残す）'
+    nodes[4]['widgets_values'][0] = quality + (nodes[4]['widgets_values'][0] if character else
+        'An anime illustration of an adult woman with silver hair and red eyes, wearing a black evening dress, '
+        'standing on a balcony above a neon-lit city at night. Flowing hair, detailed fabric, dramatic rim lighting.')
+    nodes[5]['widgets_values'] = ['worst quality, low quality, blurry, jpeg artifacts, sepia, username, watermark']
+    nodes[4]['color'], nodes[4]['bgcolor'] = '#232', '#353'
+    nodes[9]['widgets_values'] = ['MOSS/CottonMoss/' + (character or 'text')]
+    if not character:
+        # No character LoRA in the plain checkpoint workflow.
+        del nodes[10]
+        data['links'] = [link for link in data['links'] if link[3] != 10]
+        for link in data['links']:
+            if link[1] == 10:
+                link[1] = 1
+    nodes[15] = node(15, 'Note', 'CottonMossの使い方', [30,730], [740,180], widgets=[
+        'CottonMoss base_turbo_test_int8：1152×1536、12 steps、CFG 3、er_sde / simple。\n'
+        '緑のテキスト欄を変更してRun。品質タグは先頭に置きます。\n'
+        + ('キャラLoRAは強度1.0から開始。顔の再現や最適強度は実画像で確認してください。' if character else
+           'キャラLoRAなしの通常生成。マリアンはMOSS_06、紅蓮はMOSS_07を開いてください。')])
+    data['nodes'] = list(nodes.values())
+    return data
+
+
 def main():
     for name, number in [('scarlet_goddeath',1), ('marian_queen2',2)]:
         data=json.loads((FOLDER/f'moss_{name}_1152x1536_25.json').read_text(encoding='utf-8'))
@@ -88,6 +121,9 @@ def main():
         by_id[11]['title']='SLG：22 / 前半50%'
         write(data,f'MOSS_0{number}_{name}_1152x1536_25.json')
         if number==1: base=copy.deepcopy(data)
+        cotton_number = 7 if number == 1 else 6
+        write(cotton_workflow(data, name), f'MOSS_0{cotton_number}_CottonMoss_{name}_1152x1536_12.json')
+    write(cotton_workflow(base), 'MOSS_05_CottonMoss_1152x1536_12.json')
     write(reference_workflow(base), 'MOSS_03_CharRef_1152x1536_25.json')
     write(reference_workflow(base,edit=True), 'MOSS_04_EditHQ_v5_25.json')
 

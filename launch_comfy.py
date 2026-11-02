@@ -147,7 +147,7 @@ async def serve(args):
         address = (f"https://{pod_id}-{args.port}.proxy.runpod.net"
                    if pod_id else f"http://127.0.0.1:{args.port}")
         print(f"Open: {address}", flush=True)
-        print("Open ComfyUI Workflows and select MOSS_01 through MOSS_04.", flush=True)
+        print("Open ComfyUI Workflows: MOSS_05 CottonMoss, MOSS_06 Marian, MOSS_07 Scarlet (12 steps).", flush=True)
         print(f"Images: {comfy / 'output' / 'MOSS'}", flush=True)
         code = await process.wait()
         if code:

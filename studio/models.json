@@ -1,4 +1,12 @@
 {
+  "cottonmoss": {
+    "url": "https://civitai.red/api/download/models/3437076?fileId=3334385",
+    "model_version_id": 3437076,
+    "file_id": 3334385,
+    "destination": "diffusion_models/cottonmoss_baseTurboTestInt8.safetensors",
+    "size": 5413737030,
+    "sha256": "e4c528e52ceff2178c264b0fc409ad049c58c8120c4bafacb02fd8f16e8be4a9"
+  },
   "hires": {
     "repo": "comfyanonymous/MOSS_image_MAX_ULTRA_hires_lora_test",
     "revision": "67841316197079670315d2dc1eaacac6afd4591a",

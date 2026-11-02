@@ -45,11 +45,22 @@ class Downloads:
                 return destination
             raise RuntimeError(f'既存モデルのチェックサムが一致しません: {destination.name}')
         self.models.mkdir(parents=True, exist_ok=True)
-        if shutil.disk_usage(self.models).free < pin['size'] + 2 * 2**30:
-            raise RuntimeError(f'{name}の取得には、モデル容量に加えて2GiBの空きが必要です。')
-        cached = Path(hf_hub_download(pin['repo'], pin['file'], revision=pin['revision'],
-                                     token=False, local_dir=self.models / '.studio-downloads' / name))
+        needed = pin['size']
+        if 'url' in pin:
+            cached = self.models / '.studio-downloads' / name / (destination.name + '.partial')
+            if cached.exists() and cached.stat().st_size <= pin['size']:
+                needed -= cached.stat().st_size
+        if shutil.disk_usage(self.models).free < needed + 2 * 2**30:
+            raise RuntimeError(f'{name}の取得には、残りの取得容量に加えて2GiBの空きが必要です。')
+        if 'url' in pin:
+            from civitai_download import download
+            cached = download(pin, cached)
+        else:
+            cached = Path(hf_hub_download(pin['repo'], pin['file'], revision=pin['revision'],
+                                         token=False, local_dir=self.models / '.studio-downloads' / name))
         if not valid_weights(cached) or cached.stat().st_size != pin['size'] or sha256(cached) != pin['sha256']:
+            if 'url' in pin:
+                cached.unlink(missing_ok=True)
             raise RuntimeError(f'{name}のダウンロード検証に失敗しました。')
         destination.parent.mkdir(parents=True, exist_ok=True)
         os.replace(cached, destination)

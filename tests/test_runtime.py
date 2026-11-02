@@ -23,7 +23,7 @@ class FileTests(unittest.TestCase):
                 prepare_image_tools(root)
                 self.assertEqual([call.args[0] for call in ensure.call_args_list], ['charref','sft','edit'])
                 files = sorted((root/'ComfyUI/user/default/workflows').glob('MOSS_0*.json'))
-                self.assertEqual(len(files), 4)
+                self.assertEqual(len(files), 7)
                 files[-1].write_text('{"user_edit": true}')
                 prepare_image_tools(root)
                 self.assertEqual(json.loads(files[-1].read_text()), {'user_edit': True})

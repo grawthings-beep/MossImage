@@ -10,6 +10,6 @@
   ],
   "lora_id": "uwgm/Moss",
   "lora_file": "mossimage_lora_marian_queen2.safetensors",
-  "workflow_file": "moss_marian_queen2.json"
+  "workflow_file": "MOSS_05_CottonMoss_1152x1536_12.json"
 }
 

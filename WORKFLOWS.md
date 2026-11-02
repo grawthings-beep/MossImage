@@ -4,12 +4,19 @@
 
 | ファイル | 用途 | 初期設定 |
 |---|---|---|
+| [MOSS_05 CottonMoss](workflows/MOSS_05_CottonMoss_1152x1536_12.json) | 選択中のCottonMoss Turbo INT8で通常生成（キャラLoRAなし） | 1152×1536・12 steps |
+| [MOSS_06 CottonMoss＋マリアン](workflows/MOSS_06_CottonMoss_marian_queen2_1152x1536_12.json) | CottonMoss＋マリアンLoRA | 1152×1536・12 steps |
+| [MOSS_07 CottonMoss＋紅蓮](workflows/MOSS_07_CottonMoss_scarlet_goddeath_1152x1536_12.json) | CottonMoss＋紅蓮LoRA | 1152×1536・12 steps |
 | [MOSS_01 紅蓮](workflows/MOSS_01_scarlet_goddeath_1152x1536_25.json) | 紅蓮LoRAで通常生成 | 1152×1536・25 steps |
 | [MOSS_02 マリアン](workflows/MOSS_02_marian_queen2_1152x1536_25.json) | マリアンLoRAで通常生成 | 1152×1536・25 steps |
 | [MOSS_03 CharRef](workflows/MOSS_03_CharRef_1152x1536_25.json) | 画像のキャラを別衣装・ポーズ・場面で生成 | 1152×1536・25 steps |
 | [MOSS_04 Edit HQ v5](workflows/MOSS_04_EditHQ_v5_25.json) | 元画像の指定箇所・内容を文章で変更 | 元画像の比率で約1MP・25 steps |
 
 ## 通常生成
+
+**CottonMossを使う場合は05〜07を開きます。** モデルは [CottonMoss base_turbo_test_int8](https://civitai.red/models/3026318/cottonmoss?modelVersionId=3437076)、指定ファイルID 3334385です。作者推奨の12 steps・CFG 3・er_sdeと、作例のsimple・SLG 22（前半50%）を採用。高速化アダプターはマージ済みなので追加しません。作例のカスタムキャッシュノードは使用せず、標準ノードで構成します。作者も試作段階・キャラ再現の難しさを明記しており、品質と速度は実GPUで未評価です。
+
+品質タグ `masterpiece, best quality, highres, absurdres` を正条件の先頭に置き、作者のnegative promptを設定済みです。Qwen BF16とsmall VAEを継続使用します。01〜04は元の構成を保持しており、CottonMossへ自動置換しません。
 
 緑の正条件テキストノードでプロンプトを変更します。紅蓮の `sc4rl3tg0d`、マリアンの `m4r14nqu33n2` は残します。着せ替える場合は元衣装の説明を新しい服に書き換えます。JSONプロンプトも同じ欄へ入力できます。
 
@@ -37,12 +44,12 @@ SFT＋Edit HQ v5を使用します。v5は作者が推奨する版で、v6の色
 
 ## ステップと進捗
 
-全ファイルの初期値は依頼に合わせて25 steps、CFG 2.5、er_sde / simple、SLG layer 22・前半50%。CharRef/Edit HQ作者の評価設定と比べたい場合は50 steps、CFG 3、euler / sgm_uniform、SLG end_percent 1.0に変更できます。25と50での実GPU画質比較はこのキットでは未実施です。
+CottonMossの05〜07は12 steps、CFG 3。従来の01〜04は25 steps、CFG 2.5。どちらもer_sde / simple、SLG layer 22・前半50%です。CharRef/Edit HQ作者の評価設定と比べたい場合は50 steps、CFG 3、euler / sgm_uniform、SLG end_percent 1.0に変更できます。各設定の実GPU画質比較はこのキットでは未実施です。
 
 進捗はComfyUI標準のノード表示とキューを使用します。起動時に `latent2rgb` の途中プレビューを有効にします。完成画像は **Save Image** に表示され、`ComfyUI/output/MOSS/` にPNGで保存されます。
 
 ## 自動準備と以前の保存物
 
-起動時に参照用CharRef・編集用SFTとv5アダプターもダウンロード・検証します（通常生成モデルに加えて約10.8GB）。ブラウザー側でモデル導入コマンドは不要です。
+起動時にCottonMoss（約5.4GB、CIVITAI_TOKEN使用）、参照用CharRef・編集用SFTとv5アダプター（約10.8GB）もダウンロード・検証します。ブラウザー側でモデル導入コマンドは不要です。CottonMossを手動配置する場合は `ComfyUI/models/diffusion_models/cottonmoss_baseTurboTestInt8.safetensors` に置くと、同じサイズ・SHA256なら再取得しません。
 
 利用者が編集したワークフローは上書きしません。同名のJSONを更新したい場合は、GitHubから新しいJSONを開いて別名で保存してください。旧画面の画像とデータは `moss-image-runtime/studio/`、元の生成PNGは `ComfyUI/output/MOSS/Studio/` に残ります。

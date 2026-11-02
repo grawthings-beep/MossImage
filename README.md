@@ -1,12 +1,12 @@
 # MOSS-Image + LoRA on RunPod
 
-このrepoを起動すると、MOSS対応版ComfyUI・MOSS-Image Base・マリアン：クイーンと紅蓮：神殺のLoRA・キャラ参照・画像編集をまとめて準備します。通常生成とキャラ参照の既定は **1152×1536・25ステップ** です。
+このrepoを起動すると、MOSS対応版ComfyUI・**CottonMoss Turbo INT8**・マリアン：クイーンと紅蓮：神殺のLoRA・キャラ参照・画像編集をまとめて準備します。新しい通常生成は **1152×1536・12ステップ**。従来のMOSS-Image Baseと25ステップのワークフローも利用できます。
 
 **毎回コマンドを入力せずに使う:** [RunPodテンプレートの自動起動設定](RUNPOD.md)を一度保存してください。以降はPod起動後に **Connect → 7860** を開くだけ。準備中も同じURLに状態を表示し、取得完了後に通常のComfyUIへ移ります。`MOSS_PASSWORD` を設定すれば、ログからパスワードを探す必要もありません。
 
 **操作はComfyUIのノードで行います。** 漫画スタジオと独自の画像生成画面は廃止しました。旧URLもComfyUIへ移動します。実行中のノード・ステップ進捗はComfyUI標準表示を使い、軽量な途中プレビューを起動時に有効にします。
 
-用意済みの4つのJSONと使い方は [WORKFLOWS.md](WORKFLOWS.md)。既存の画像・保存データは削除しません。
+用意済みの7つのJSONと使い方は [WORKFLOWS.md](WORKFLOWS.md)。CottonMossは **MOSS_05（単体）・06（マリアン）・07（紅蓮）**。既存の画像・保存データは削除しません。
 
 **LoRAを作る場合:** [PCから送信してRunPodで自動学習する手順](TRAINING.md)。画像とキャプションをまとめて送り、Podに1行貼ると受信・Pre-Cache・学習・保存までバックグラウンドで進みます。
 
@@ -17,6 +17,7 @@
 - /workspaceの保存容量は **100GB**、RAMは64GB以上を目安にする。
 - BF16対応GPUを1枚。48GB級が余裕を持たせた目安。ComfyUIがメモリに応じてオフロードします。GPU別の速度・最大解像度は未計測です。
 - LoRAの保存先は非公開のため、Podの環境変数 **HF_TOKEN** に、uwgm/Mossを読めるHugging Faceトークンを設定できます。設定しなくても初回のターミナルで非表示入力できます。
+- CottonMossの取得用に **CIVITAI_TOKEN** をPodの環境変数へ設定します。HF_TOKENとは別です。取得済みの同一ファイルがあれば再取得しません。
 
 ## 2. 最初の起動
 
@@ -26,7 +27,7 @@ PodのTerminalで、この1行を実行します。
 cd /workspace && git clone https://github.com/grawthings-beep/MossImage.git && cd MossImage && bash background.sh
 ```
 
-CUDA実演算の確認 → MOSS対応ComfyUIの固定版を取得 → 依存の確認 → LoRAとモデルの取得 → ログイン付きComfyUI起動、の順で進みます。通常生成用の約30GBに加え、参照・編集用に約10.8GB取得します。初回はダウンロードに時間がかかります。
+CUDA実演算の確認 → MOSS対応ComfyUIの固定版を取得 → 依存の確認 → LoRAとモデルの取得 → ログイン付きComfyUI起動、の順で進みます。従来の通常生成用の約30GBと参照・編集用の約10.8GBに加え、CottonMossを約5.4GB取得します。初回はダウンロードに時間がかかります。
 
 この起動方法はバックグラウンドで動くため、iPhoneのSafariやターミナルを閉じてもセットアップ・生成が続きます。**HF_TOKENを設定済み**、またはLoRAを配置済みで使用してください。初回の進行とログイン情報を表示:
 
@@ -67,13 +68,15 @@ cd /workspace/MossImage && bash background.sh
 ## 3. 生成する
 
 1. **Connect → 7860** で通常のComfyUIを開く。
-2. **Workflows** から `MOSS_01`～`MOSS_04` のいずれかを開く。
+2. **Workflows** から `MOSS_05`（CottonMoss単体）、`MOSS_06`（マリアン）、`MOSS_07`（紅蓮）を開く。参照は03、編集は04。
 3. テキストノードでプロンプトを変更。参照・編集の場合は **Load Image** で画像をアップロード。
 4. **Run / Queue** で実行。**Save Image** に完成画像が表示され、PNGが自動保存される。
 
-通常生成2種類・CharRef・Edit HQ v5のワークフローを自動配置します。参照・編集用の追加モデルも起動時に取得します（追加約10.8GB）。以前の保存済みワークフローは上書きせず残します。
+CottonMossの通常生成3種類と、従来の通常生成2種類・CharRef・Edit HQ v5のワークフローを自動配置します。必要な追加モデルも起動時に取得します。以前の保存済みワークフローは上書きせず残します。
 
-通常生成の初期値は学習と同じ **MOSS-Image Base（BF16）**、テキストエンコーダーBF16、LoRA強度1.0、**1152×1536、25 steps、CFG 2.5、er_sde / simple、SLG layer 22を前半50%に適用**。seedは比較用に42です。別の候補を出すときはKSamplerのseedを変更します。画像編集はSFT＋Edit HQ v5で、元画像の縦横比を保つ約1MP出力です。
+CottonMossの初期値は **12 steps、CFG 3、er_sde / simple、SLG layer 22を前半50%に適用**。作者の推奨値と公開作例の設定を使用します。Qwenのテキストエンコーダーは既存のBF16、VAEは既存のsmall版。マリアン・紅蓮用はLoRA強度1.0で、最適強度や顔の再現性は未検証です。seedは42です。
+
+従来の01・02はMOSS-Image Base（BF16）、1152×1536、25 steps、CFG 2.5を保持。03のキャラ参照はBase＋CharRef、04の画像編集はSFT＋Edit HQ v5のままです。CottonMossとの参照・編集アダプター併用は未検証なので置き換えていません。
 
 これらは初期値です。顔・衣装の再現品質を保証するものではなく、実際の生成結果で確認します。
 

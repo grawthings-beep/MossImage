@@ -137,3 +137,18 @@ Verified locally:
 - `git diff --check` passed. Workflow generation uses only the standard library and can be reproduced with `python scripts/build_native_workflows.py`.
 
 Not verified: full model downloads on the user's Pod, CUDA image generation, v5 learned quality or 25-vs-50-step quality. No remote Pod/template was changed and no paid GPU was started. Native ComfyUI now owns new generation requests; the retired custom screen's browser draft/persistent-queue UI is no longer the workflow.
+
+## CottonMoss Turbo INT8 — 2026-11-03
+
+Added the user-selected Civitai model version 3437076 / file 3334385, `cottonmoss_baseTurboTestInt8.safetensors`. The public Civitai API identifies it as a MOSS-Image-Base merge, 5,413,737,030 bytes, SHA256 `e4c528e52ceff2178c264b0fc409ad049c58c8120c4bafacb02fd8f16e8be4a9`. Author description and sample ComfyUI metadata were read on this date: 12 steps, CFG 3, er_sde / simple, SLG single layer 22 from 0 to 0.5. The author's experimental model has no guaranteed character fidelity.
+
+Setup downloads the exact file using the Pod's CIVITAI_TOKEN, resumes partial downloads, verifies size/SHA256/safetensors structure before installing it, and reuses a verified local file. Credentials and signed URLs are excluded from logs. Added MOSS_05 (plain CottonMoss), MOSS_06 (Marian LoRA), and MOSS_07 (Scarlet LoRA), all at 1152×1536/12 steps. The existing Qwen BF16 encoder and small VAE are retained; custom cache/prompt-weight nodes from the author's samples are not added. MOSS_01 through MOSS_04 and user edits are preserved.
+
+- **59 unit/integration tests passed**, including interrupted-download resume, servers ignoring Range, rejecting incorrect ranges/login HTML, credential-safe error messages, checksum failure before installation, verified-file reuse, and free-space accounting for only the remaining bytes.
+- Real pinned ComfyUI frontend loaded and exported all **seven workflows** with no missing node types or JavaScript page errors. Checked CottonMoss filenames, character LoRA selection, 12 steps/CFG 3, quality tags, and original reference/edit wiring. Screenshots were inspected and the new instructions moved into view.
+- All **seven frontend-exported API prompts** passed the pinned real backend validator alongside the 22 existing graph variants. Model files were empty name fixtures; this checks graph schemas, not weight loading or generated quality.
+- `git diff --check` passed. No new dependencies or changes to the CUDA PyTorch stack.
+
+Not verified: the actual INT8 tensor header (anonymous Civitai download redirected to login), authenticated full download with the Pod's token, full-weight CUDA generation, LoRA quality or speed. The user confirmed CIVITAI_TOKEN is configured on RunPod, but this session has no access to that Pod or token. No remote Pod/template was changed and no paid GPU was started. A running Pod needs an update/restart after its current work finishes.
+
+Primary sources: [CottonMoss model](https://civitai.red/models/3026318/cottonmoss?modelVersionId=3437076), [version metadata](https://civitai.red/api/v1/model-versions/3437076), [author description](https://civitai.red/api/v1/models/3026318).

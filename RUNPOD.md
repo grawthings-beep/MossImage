@@ -10,6 +10,7 @@
 | Volume mount path | `/workspace` |
 | Volume Disk | 100GB以上を目安に、既存の学習モデル分も確保 |
 | `HF_TOKEN` | 設定済みのHugging Faceシークレット（`uwgm/Moss` の読み取り権限） |
+| `CIVITAI_TOKEN` | CottonMossをダウンロードできるCivitai APIトークン。設定済みなら変更不要 |
 | `MOSS_PASSWORD` | 自分で決めたログイン用パスワード。英数字・記号で12文字以上を推奨 |
 
 **Container Start Command**（ターミナルではなくテンプレートの起動コマンド欄に保存）:
@@ -22,8 +23,9 @@ bash -lc 'set -e; mkdir -p /workspace; if [ -d /workspace/MossImage/.git ]; then
 
 次回からは **Podを起動 → Connectの7860を開く → ログイン**。ユーザー名は `moss`、パスワードは設定した `MOSS_PASSWORD`。準備画面で待つと、通常生成・キャラ参照・画像編集のモデル取得後、通常のComfyUIへ移ります。失敗時は画面に停止状態が出て、修正後に「準備を再試行」から再開できます。詳細はRunPodのLogsで確認できます。
 
-- ComfyUIの **Workflows** に `MOSS_01`～`MOSS_04` を配置します。紅蓮・マリアン・キャラ参照・画像編集の4種類です。[各ワークフローの操作](WORKFLOWS.md)。
-- 通常生成とキャラ参照は **1152×1536・25ステップ**。編集は元画像の比率を保つ約1MP・25ステップです。
+- ComfyUIの **Workflows** に `MOSS_01`～`MOSS_07` を配置します。通常生成は **05 CottonMoss・06 マリアン・07 紅蓮**を開きます。[各ワークフローの操作](WORKFLOWS.md)。
+- CottonMossは **1152×1536・12ステップ・CFG 3**。初回に指定されたINT8モデルを約5.4GB取得し、SHA256を照合します。中断時は再試行すると途中から取得します。トークンはPod内でのみ使用し、ログやブラウザーには渡しません。
+- 従来の01・02とキャラ参照03は1152×1536・25ステップを保持。編集04は元画像の比率を保つ約1MP・25ステップです。
 - 漫画スタジオ・独自の画像生成画面は廃止。旧 `/studio/`、`/studio/image` はComfyUIへ転送します。保存済みの画像とファイルは維持します。
 - ファイル: イメージにJupyterLabがあれば8888も自動起動します。新たに起動したJupyterのログイントークンは `MOSS_PASSWORD` と同じです。既存の8888サービスは停止・置き換えしません。
 

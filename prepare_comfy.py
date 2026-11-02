@@ -87,6 +87,12 @@ def prepare_image_tools(runtime):
         install_workflow(Path(runtime) / 'ComfyUI', {'workflow_file': workflow.name})
 
 
+def prepare_generation_model(runtime):
+    from studio.assets import Downloads
+    print('MOSS_STAGE=CottonMoss Turbo INT8を準備しています', flush=True)
+    Downloads(runtime).ensure('cottonmoss')
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--runtime", required=True, type=Path)
@@ -101,6 +107,7 @@ def main():
     for character in CHARACTERS.values():
         if character['file'] != pins['lora_file']:
             download_lora(models, {'lora_id': character['repo'], 'lora_file': character['file']})
+    prepare_generation_model(args.runtime)
     info = HfApi(token=False).model_info(
         pins["model_id"], revision=pins["model_revision"], files_metadata=True,
     )
@@ -128,7 +135,7 @@ def main():
         install_workflow(comfy, {'workflow_file': character['workflow']})
     prepare_image_tools(args.runtime)
     print("MOSS_STAGE=通常生成・キャラ参照・画像編集のワークフローを配置しました")
-    print("MOSS-Image Base + character LoRAs + CharRef + Edit HQ v5 are ready.")
+    print("CottonMoss Turbo INT8 + character LoRAs + original MOSS workflows are ready.")
 
 
 if __name__ == "__main__":
