@@ -27,7 +27,7 @@ PodのTerminalで、この1行を実行します。
 cd /workspace && git clone https://github.com/grawthings-beep/MossImage.git && cd MossImage && bash background.sh
 ```
 
-CUDA実演算の確認 → MOSS対応ComfyUIの固定版を取得 → 依存の確認 → LoRAとモデルの取得 → ログイン付きComfyUI起動、の順で進みます。従来の通常生成用の約30GBと参照・編集用の約10.8GBに加え、CottonMossを約5.4GB取得します。初回はダウンロードに時間がかかります。
+CottonMossのAPI認証・取得可否を少量の読取で確認 → CUDA実演算の確認 → MOSS対応ComfyUIの固定版を取得 → 依存の確認 → LoRAとモデルの取得 → ログイン付きComfyUI起動、の順で進みます。トークン未設定・未展開・認証拒否・配信エラーは準備画面に表示します。従来の通常生成用の約30GBと参照・編集用の約10.8GBに加え、CottonMossを約5.4GB取得します。初回はダウンロードに時間がかかります。
 
 この起動方法はバックグラウンドで動くため、iPhoneのSafariやターミナルを閉じてもセットアップ・生成が続きます。**HF_TOKENを設定済み**、またはLoRAを配置済みで使用してください。初回の進行とログイン情報を表示:
 

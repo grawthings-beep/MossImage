@@ -139,5 +139,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except RuntimeError as error:
+        print(f'MOSS_ERROR={error}', flush=True)
+        raise SystemExit(1) from None
 

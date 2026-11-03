@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import re
 import signal
 import subprocess
 import sys
@@ -71,13 +72,23 @@ def progress_server(host, port, login, status, retry):
 
 
 def run_setup(status):
+    status.pop('error', None)
     process = subprocess.Popen(['bash', str(KIT / 'setup.sh')], stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT, text=True, start_new_session=True)
     try:
         for line in process.stdout:
-            print(line, end='', flush=True)
-            if line.startswith('MOSS_STAGE='):
-                status['message'] = line.partition('=')[2].strip()
+            if line.startswith('MOSS_ERROR='):
+                message = line.partition('=')[2].strip()
+                for name in ('CIVITAI_TOKEN', 'HF_TOKEN', 'MOSS_PASSWORD', 'JUPYTER_TOKEN'):
+                    secret = os.environ.get(name)
+                    if secret:
+                        message = message.replace(secret, '[非表示]')
+                status['error'] = re.sub(r'https?://\S+', '[URL省略]', message)[:800]
+                print('MOSS_ERROR=' + status['error'], flush=True)
+            else:
+                print(line, end='', flush=True)
+                if line.startswith('MOSS_STAGE='):
+                    status['message'] = line.partition('=')[2].strip()
         return process.wait()
     finally:
         process.stdout.close()
@@ -128,7 +139,7 @@ def main():
             code = run_setup(status)
             if code == 0:
                 break
-            status.update(failed=True, message=f'準備が停止しました（終了コード {code}）。RunPodのLogsで原因を確認できます。')
+            status.update(failed=True, message=status.get('error') or f'準備が停止しました（終了コード {code}）。RunPodのLogsで原因を確認できます。')
             retry.wait()
         status['message'] = 'モデルの準備完了。生成サーバーを起動しています…'
     except BaseException:

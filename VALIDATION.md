@@ -152,3 +152,17 @@ Setup downloads the exact file using the Pod's CIVITAI_TOKEN, resumes partial do
 Not verified: the actual INT8 tensor header (anonymous Civitai download redirected to login), authenticated full download with the Pod's token, full-weight CUDA generation, LoRA quality or speed. The user confirmed CIVITAI_TOKEN is configured on RunPod, but this session has no access to that Pod or token. No remote Pod/template was changed and no paid GPU was started. A running Pod needs an update/restart after its current work finishes.
 
 Primary sources: [CottonMoss model](https://civitai.red/models/3026318/cottonmoss?modelVersionId=3437076), [version metadata](https://civitai.red/api/v1/model-versions/3437076), [author description](https://civitai.red/api/v1/models/3026318).
+
+## Civitai access checks and actionable startup errors — 2026-11-03
+
+The user reported a download failure but had already deleted the Pod; no failing log, runtime or actual token was available. The root cause of that incident remains unknown. A separate observable problem was reproduced against the public API: the previous Mozilla User-Agent caused unauthenticated requests to redirect to login, hiding the original authorization error behind a Cloudflare challenge or HTML page. A non-browser API User-Agent receives JSON HTTP 401 instead on both official domains.
+
+Changed requests to a non-browser User-Agent and Bearer authentication, which Civitai's current server auth code supports. The credential is an unredirected header, so urllib removes it when following the signed CDN download URL. Added a standard-library preflight before CUDA/dependency installation: validate that the environment token is present and expanded, then read only the model's first eight bytes to verify access. Existing complete local files skip that request and receive full checksum validation later. Added distinct messages for missing/unexpanded tokens, 401, access restrictions, disabled downloads, 429 and transport failures; these now reach the authenticated preparation screen. CDN refusals can obtain a fresh signed URL on bounded retries; challenges and API access refusals are not bypassed.
+
+- **65 unit/integration tests passed**, covering the new preflight, real urllib redirect header handling, provider error classification, unique retry URLs, preserved partial files, and startup error propagation/redaction, plus existing functionality.
+- Ran the preflight against the real Civitai API with a deliberately invalid diagnostic key: it exited with the expected safe HTTP 401 message, no browser-login redirect, no key or signed URL in output. This verifies failure handling, not authorized downloading.
+- No workflow, model hash, container image, environment-variable name or CUDA dependency changes.
+
+Not verified: the deleted Pod's failure cause, the user's valid-key authentication, the full 5.4GB download or CUDA image generation. No replacement Pod was created. This is an access/diagnostic improvement, not a confirmed resolution of the unknown original failure.
+
+Primary implementation references: [Civitai browser/API request selection](https://github.com/civitai/civitai/blob/main/src/server/utils/request-helpers.ts), [Bearer/query-token authentication](https://github.com/civitai/civitai/blob/main/src/server/auth/get-server-auth-session.ts), [download endpoint](https://github.com/civitai/civitai/blob/main/src/pages/api/download/models/%5BmodelVersionId%5D.ts).

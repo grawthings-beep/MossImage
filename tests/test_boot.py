@@ -1,21 +1,36 @@
 import base64
 import json
+import io
 from pathlib import Path
 import sys
 import tempfile
 import threading
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import urllib.error
 import urllib.request
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from launch import credentials
-from pod_boot import progress_server
+from pod_boot import progress_server, run_setup
 from characters import CHARACTERS
 
 
 class BootTests(unittest.TestCase):
+    def test_preparation_failure_reaches_status_without_secret_or_signed_url(self):
+        process = Mock()
+        process.stdout = io.StringIO('MOSS_STAGE=Checking download\nMOSS_ERROR=HTTP 401 token=test-secret https://example.invalid/?signed=private\n')
+        process.wait.return_value = 1
+        process.poll.return_value = 1
+        status = {'error': 'old failure'}
+        with patch('pod_boot.subprocess.Popen', return_value=process), \
+             patch.dict('os.environ', {'CIVITAI_TOKEN': 'test-secret'}):
+            self.assertEqual(run_setup(status), 1)
+        self.assertIn('HTTP 401', status['error'])
+        self.assertNotIn('test-secret', status['error'])
+        self.assertNotIn('signed=private', status['error'])
+        self.assertEqual(status['message'], 'Checking download')
+
     def test_configured_password_used_without_overwriting_saved_login(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'login.json'
