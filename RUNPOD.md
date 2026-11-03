@@ -9,8 +9,7 @@
 | Expose HTTP Ports | `7860,8888` |
 | Volume mount path | `/workspace` |
 | Volume Disk | 100GB以上を目安に、既存の学習モデル分も確保 |
-| `HF_TOKEN` | 設定済みのHugging Faceシークレット（`uwgm/Moss` の読み取り権限） |
-| `CIVITAI_TOKEN` | CottonMossをダウンロードできるCivitai APIトークン。設定済みなら変更不要 |
+| `HF_TOKEN` | 設定済みのHugging Faceシークレット（`uwgm/Moss` のCottonMoss・キャラLoRAの読み取り権限） |
 | `MOSS_PASSWORD` | 自分で決めたログイン用パスワード。英数字・記号で12文字以上を推奨 |
 
 **Container Start Command**（ターミナルではなくテンプレートの起動コマンド欄に保存）:
@@ -23,7 +22,7 @@ bash -lc 'set -e; mkdir -p /workspace; if [ -d /workspace/MossImage/.git ]; then
 
 次回からは **Podを起動 → Connectの7860を開く → ログイン**。ユーザー名は `moss`、パスワードは設定した `MOSS_PASSWORD`。準備画面で待つと、通常生成・キャラ参照・画像編集のモデル取得後、通常のComfyUIへ移ります。失敗時は画面に停止状態が出て、修正後に「準備を再試行」から再開できます。詳細はRunPodのLogsで確認できます。
 
-CottonMossの取得権限は、依存パッケージや大容量モデルを入れる前に確認します。`CIVITAI_TOKEN`がプロセスに渡っていない、シークレット参照式が未展開、認証エラー（401）、アクセス拒否（403）、回数制限（429）などは7860の準備画面に理由を表示します。APIキーはAuthorizationヘッダーで送信し、モデル配信先へリダイレクトするときは除去します。コンテナイメージや環境変数名の追加変更は不要です。
+CottonMossは指定された [Hugging Faceのファイル](https://huggingface.co/uwgm/Moss/resolve/main/cottonmoss_baseTurboTestInt8.safetensors) をHF_TOKENで取得します。**CIVITAI_TOKENは不要で、Civitaiへは接続しません**。依存パッケージや大容量モデルを入れる前に、Hugging Face上の読み取り権限とファイルのサイズ・SHA256を確認します。HF_TOKEN未設定・未展開、認証拒否、ファイル未存在などは7860の準備画面に表示します。コンテナイメージや新しい環境変数の追加は不要です。
 
 - ComfyUIの **Workflows** に `MOSS_01`～`MOSS_07` を配置します。通常生成は **05 CottonMoss・06 マリアン・07 紅蓮**を開きます。[各ワークフローの操作](WORKFLOWS.md)。
 - CottonMossは **1152×1536・12ステップ・CFG 3**。初回に指定されたINT8モデルを約5.4GB取得し、SHA256を照合します。中断時は再試行すると途中から取得します。トークンはPod内でのみ使用し、ログやブラウザーには渡しません。

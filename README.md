@@ -17,7 +17,7 @@
 - /workspaceの保存容量は **100GB**、RAMは64GB以上を目安にする。
 - BF16対応GPUを1枚。48GB級が余裕を持たせた目安。ComfyUIがメモリに応じてオフロードします。GPU別の速度・最大解像度は未計測です。
 - LoRAの保存先は非公開のため、Podの環境変数 **HF_TOKEN** に、uwgm/Mossを読めるHugging Faceトークンを設定できます。設定しなくても初回のターミナルで非表示入力できます。
-- CottonMossの取得用に **CIVITAI_TOKEN** をPodの環境変数へ設定します。HF_TOKENとは別です。取得済みの同一ファイルがあれば再取得しません。
+- CottonMossも指定の **uwgm/Moss** から同じ **HF_TOKEN** で取得します。**CIVITAI_TOKENは不要**です。取得済みの同一ファイルがあれば再取得しません。
 
 ## 2. 最初の起動
 
@@ -27,7 +27,7 @@ PodのTerminalで、この1行を実行します。
 cd /workspace && git clone https://github.com/grawthings-beep/MossImage.git && cd MossImage && bash background.sh
 ```
 
-CottonMossのAPI認証・取得可否を少量の読取で確認 → CUDA実演算の確認 → MOSS対応ComfyUIの固定版を取得 → 依存の確認 → LoRAとモデルの取得 → ログイン付きComfyUI起動、の順で進みます。トークン未設定・未展開・認証拒否・配信エラーは準備画面に表示します。従来の通常生成用の約30GBと参照・編集用の約10.8GBに加え、CottonMossを約5.4GB取得します。初回はダウンロードに時間がかかります。
+Hugging FaceでCottonMossの読み取り権限・ファイル名・サイズ・SHA256を確認 → CUDA実演算の確認 → MOSS対応ComfyUIの固定版を取得 → 依存の確認 → LoRAとモデルの取得 → ログイン付きComfyUI起動、の順で進みます。HF_TOKEN未設定・未展開・認証拒否・配信エラーは準備画面に表示します。従来の通常生成用の約30GBと参照・編集用の約10.8GBに加え、CottonMossを約5.4GB取得します。初回はダウンロードに時間がかかります。
 
 この起動方法はバックグラウンドで動くため、iPhoneのSafariやターミナルを閉じてもセットアップ・生成が続きます。**HF_TOKENを設定済み**、またはLoRAを配置済みで使用してください。初回の進行とログイン情報を表示:
 

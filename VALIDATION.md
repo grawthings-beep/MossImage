@@ -166,3 +166,13 @@ Changed requests to a non-browser User-Agent and Bearer authentication, which Ci
 Not verified: the deleted Pod's failure cause, the user's valid-key authentication, the full 5.4GB download or CUDA image generation. No replacement Pod was created. This is an access/diagnostic improvement, not a confirmed resolution of the unknown original failure.
 
 Primary implementation references: [Civitai browser/API request selection](https://github.com/civitai/civitai/blob/main/src/server/utils/request-helpers.ts), [Bearer/query-token authentication](https://github.com/civitai/civitai/blob/main/src/server/auth/get-server-auth-session.ts), [download endpoint](https://github.com/civitai/civitai/blob/main/src/pages/api/download/models/%5BmodelVersionId%5D.ts).
+
+## CottonMoss moved to the user's Hugging Face repository — 2026-11-03
+
+At the user's request, changed the source to `uwgm/Moss`, `main`, `cottonmoss_baseTurboTestInt8.safetensors`, using the Pod's existing HF_TOKEN. Removed the Civitai downloader and startup prerequisite; CIVITAI_TOKEN is no longer read or required by model setup. Kept the original file's expected 5,413,737,030 bytes and SHA256, so a different upload is rejected instead of silently replacing the chosen model. `main` is a mutable source reference; the expected content hash still fixes the accepted bytes.
+
+The standard-library preflight now queries Hugging Face metadata to check read access, exact filename, LFS size and SHA256 before installing dependencies. The existing Hugging Face Hub downloader handles transfer/resume; the asset installer validates the complete local safetensors and SHA256 before moving it into ComfyUI. Verified installed files and completed cached files are reusable without a token. Public-model requests continue to use `token=False`. Existing workflows and generation defaults are unchanged.
+
+- **62 unit/integration tests passed**, replacing the removed Civitai-specific cases with private-HF token routing, public-token exclusion, metadata/hash mismatch rejection, existing-file/cache reuse, partial-download free-space accounting and safe error handling.
+- Verified the Hub's actual revision API metadata shape against a pinned public MOSS file. The connected Hugging Face tool reports `uwgm/Moss` as private. The private CottonMoss file contents, current commit and authenticated full download could not be independently checked in this session; those checks run on the Pod using its HF_TOKEN.
+- No new dependencies, CUDA changes, image build or workflow changes. The prior Civitai investigation is historical and is no longer part of startup.

@@ -50,6 +50,6 @@ CottonMossの05〜07は12 steps、CFG 3。従来の01〜04は25 steps、CFG 2.5�
 
 ## 自動準備と以前の保存物
 
-起動時にCottonMoss（約5.4GB、CIVITAI_TOKEN使用）、参照用CharRef・編集用SFTとv5アダプター（約10.8GB）もダウンロード・検証します。ブラウザー側でモデル導入コマンドは不要です。CottonMossを手動配置する場合は `ComfyUI/models/diffusion_models/cottonmoss_baseTurboTestInt8.safetensors` に置くと、同じサイズ・SHA256なら再取得しません。
+起動時にCottonMoss（約5.4GB、指定の`uwgm/Moss`からHF_TOKENで取得）、参照用CharRef・編集用SFTとv5アダプター（約10.8GB）もダウンロード・検証します。CIVITAI_TOKENは不要です。ブラウザー側でモデル導入コマンドは不要です。CottonMossを手動配置する場合は `ComfyUI/models/diffusion_models/cottonmoss_baseTurboTestInt8.safetensors` に置くと、同じサイズ・SHA256なら再取得しません。
 
 利用者が編集したワークフローは上書きしません。同名のJSONを更新したい場合は、GitHubから新しいJSONを開いて別名で保存してください。旧画面の画像とデータは `moss-image-runtime/studio/`、元の生成PNGは `ComfyUI/output/MOSS/Studio/` に残ります。

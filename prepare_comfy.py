@@ -89,7 +89,7 @@ def prepare_image_tools(runtime):
 
 def prepare_generation_model(runtime):
     from studio.assets import Downloads
-    print('MOSS_STAGE=CottonMoss Turbo INT8を準備しています', flush=True)
+    print('MOSS_STAGE=Hugging FaceからCottonMoss Turbo INT8を準備しています', flush=True)
     Downloads(runtime).ensure('cottonmoss')
 
 

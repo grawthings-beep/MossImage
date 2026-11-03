@@ -13,8 +13,8 @@ exec > >(tee -a "$MOSS_HOME/logs/comfy-setup.log") 2>&1
 trap 'printf "Setup failed at line %s. See %s/logs/comfy-setup.log\n" "$LINENO" "$MOSS_HOME" >&2' ERR
 command -v git >/dev/null
 command -v python3 >/dev/null
-echo 'MOSS_STAGE=CottonMossのダウンロード権限を事前確認しています'
-python3 "$KIT/civitai_download.py" --check --runtime "$MOSS_HOME"
+echo 'MOSS_STAGE=Hugging FaceのCottonMoss取得権限を事前確認しています'
+python3 "$KIT/hf_model_access.py" --runtime "$MOSS_HOME"
 echo 'MOSS_STAGE=GPUとCUDAを確認しています'
 python3 "$KIT/check_runtime.py" --constraints "$MOSS_HOME/comfy-cuda-constraints.txt"
 

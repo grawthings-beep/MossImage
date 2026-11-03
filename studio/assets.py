@@ -7,6 +7,7 @@ import shutil
 import urllib.request
 
 from huggingface_hub import hf_hub_download
+from hf_model_access import access_error, model_token
 from prepare_comfy import valid_weights
 
 PINS = json.loads(Path(__file__).with_name('models.json').read_text(encoding='utf-8'))
@@ -46,21 +47,31 @@ class Downloads:
             raise RuntimeError(f'既存モデルのチェックサムが一致しません: {destination.name}')
         self.models.mkdir(parents=True, exist_ok=True)
         needed = pin['size']
-        if 'url' in pin:
-            cached = self.models / '.studio-downloads' / name / (destination.name + '.partial')
-            if cached.exists() and cached.stat().st_size <= pin['size']:
-                needed -= cached.stat().st_size
+        cache_dir = self.models / '.studio-downloads' / name
+        # Hub stores resumable chunks under its local_dir download cache, keyed by ETag.
+        partials = list((cache_dir / '.cache/huggingface/download').rglob(f'*.{pin["sha256"]}.incomplete'))
+        partial_size = sum(path.stat().st_size for path in partials)
+        if partial_size <= pin['size']:
+            needed -= partial_size
+        complete_cache = cache_dir / pin['file']
+        if complete_cache.is_file() and complete_cache.stat().st_size == pin['size']:
+            needed = 0
         if shutil.disk_usage(self.models).free < needed + 2 * 2**30:
             raise RuntimeError(f'{name}の取得には、残りの取得容量に加えて2GiBの空きが必要です。')
-        if 'url' in pin:
-            from civitai_download import download
-            cached = download(pin, cached)
+        if complete_cache.is_file() and complete_cache.stat().st_size == pin['size']:
+            cached = complete_cache
         else:
-            cached = Path(hf_hub_download(pin['repo'], pin['file'], revision=pin['revision'],
-                                         token=False, local_dir=self.models / '.studio-downloads' / name))
+            token = model_token(pin)
+            try:
+                cached = Path(hf_hub_download(pin['repo'], pin['file'], revision=pin['revision'],
+                                             token=token, local_dir=cache_dir))
+            except Exception as error:
+                status = getattr(getattr(error, 'response', None), 'status_code', None)
+                if status is not None:
+                    raise RuntimeError(access_error(pin, status)) from None
+                raise RuntimeError(f'{name}のHugging Faceダウンロードに失敗しました（{type(error).__name__}）。準備を再試行してください。') from None
         if not valid_weights(cached) or cached.stat().st_size != pin['size'] or sha256(cached) != pin['sha256']:
-            if 'url' in pin:
-                cached.unlink(missing_ok=True)
+            cached.unlink(missing_ok=True)
             raise RuntimeError(f'{name}のダウンロード検証に失敗しました。')
         destination.parent.mkdir(parents=True, exist_ok=True)
         os.replace(cached, destination)
