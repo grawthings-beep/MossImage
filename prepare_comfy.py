@@ -71,7 +71,10 @@ def prepare_generation_model(runtime):
     from studio.assets import Downloads
     downloads = Downloads(runtime)
     for name, label in [('cottonmoss', 'CottonMoss Turbo INT8'),
+                        ('sft', 'MOSS-Image SFT BF16'),
                         ('marciana_marine_study', 'マルチャーナの30枚版LoRA'),
+                        ('marciana_marine_study_original', 'マルチャーナの元の33枚版LoRA'),
+                        ('marian_last_affection2_3k', 'マリアンのラストアフェクションLoRA'),
                         ('upscale_2x', '2倍アップスケールモデル')]:
         print(f'MOSS_STAGE={label}を準備しています', flush=True)
         downloads.ensure(name)
@@ -108,7 +111,7 @@ def main():
         if not valid_weights(Path(path)):
             raise SystemExit(f"Model download is incomplete: {path}")
     install_workflows(comfy)
-    print("MOSS_STAGE=マルチャーナの高速版・高精細版ワークフローを配置しました")
+    print("MOSS_STAGE=マリアンとマルチャーナの高速版・高精細版ワークフローを配置しました")
 
 
 if __name__ == "__main__":

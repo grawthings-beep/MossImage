@@ -147,7 +147,7 @@ async def serve(args):
         address = (f"https://{pod_id}-{args.port}.proxy.runpod.net"
                    if pod_id else f"http://127.0.0.1:{args.port}")
         print(f"Open: {address}", flush=True)
-        print("Marciana Workflows: MOSS_10 Fast2x (1728x2304), MOSS_08 Quality2x (2304x3072).", flush=True)
+        print("Marian and Marciana workflows: MOSS_10 Fast2x (1728x2304), MOSS_08 Quality2x (2304x3072).", flush=True)
         print(f"Images: {comfy / 'output' / 'MOSS'}", flush=True)
         code = await process.wait()
         if code:

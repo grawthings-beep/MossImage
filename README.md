@@ -1,6 +1,6 @@
 # MOSS-Image + LoRA on RunPod
 
-RunPodで **マルチャーナ：マリンスタディ** を生成するComfyUIキットです。CottonMoss Turbo INT8とキャラLoRAを使い、1回のRunで元画像と2倍仕上げ版を保存します。
+RunPodで **マリアン：ラストアフェクション** と **マルチャーナ：マリンスタディ**（元の33枚版・30枚版 v1）を生成するComfyUIキットです。各ワークフローにはキャラLoRAが設定されており、1回のRunで元画像と2倍仕上げ版を保存します。
 
 **毎回コマンドを入力せずに使う:** [RunPodテンプレートの自動起動設定](RUNPOD.md)を一度保存してください。以降はPod起動後に **Connect → 7860** を開くだけ。準備中も同じURLに状態を表示し、取得完了後に通常のComfyUIへ移ります。`MOSS_PASSWORD` を設定すれば、ログからパスワードを探す必要もありません。
 
@@ -16,7 +16,7 @@ RunPodで **マルチャーナ：マリンスタディ** を生成するComfyUI�
 - **HTTP Port 7860** を公開。JupyterLabを使う場合は8888も公開。
 - /workspaceの保存容量は **100GB**、RAMは64GB以上を目安にする。
 - BF16対応GPUを1枚。48GB級が余裕を持たせた目安。ComfyUIがメモリに応じてオフロードします。GPU別の速度・最大解像度は未計測です。
-- Podの環境変数 **HF_TOKEN** に `uwgm/Moss` のCottonMossとマルチャーナLoRAを読めるシークレットを割り当てます。
+- Podの環境変数 **HF_TOKEN** に `uwgm/Moss` のCottonMossとキャラLoRAを読めるシークレットを割り当てます。
 
 ## 2. 最初の起動
 
@@ -26,7 +26,7 @@ PodのTerminalで、この1行を実行します。
 cd /workspace && git clone https://github.com/grawthings-beep/MossImage.git && cd MossImage && bash background.sh
 ```
 
-Hugging FaceでCottonMossの読み取り権限・ファイル名・サイズ・SHA256を確認 → CUDA実演算の確認 → MOSS対応ComfyUIの固定版を取得 → 依存の確認 → LoRAとモデルの取得 → ログイン付きComfyUI起動、の順で進みます。HF_TOKEN未設定・未展開・認証拒否・配信エラーは準備画面に表示します。初回はCottonMoss、マルチャーナLoRA、Qwenテキストエンコーダー、small VAE、2倍モデルをダウンロードします。
+Hugging FaceでCottonMossの読み取り権限・ファイル名・サイズ・SHA256を確認 → CUDA実演算の確認 → MOSS対応ComfyUIの固定版を取得 → 依存の確認 → LoRAとモデルの取得 → ログイン付きComfyUI起動、の順で進みます。HF_TOKEN未設定・未展開・認証拒否・配信エラーは準備画面に表示します。初回はCottonMoss Turbo INT8、MOSS-Image Base BF16、MOSS-Image SFT BF16、キャラLoRA 3種、Qwenテキストエンコーダー、small VAE、2倍モデルをダウンロードします。
 
 この起動方法はバックグラウンドで動くため、iPhoneのSafariやターミナルを閉じてもセットアップ・生成が続きます。**HF_TOKENを設定済み**、またはLoRAを配置済みで使用してください。初回の進行とログイン情報を表示:
 
@@ -56,10 +56,12 @@ cd /workspace/MossImage && bash background.sh
 
 ### LoRAをPCからアップロードする場合
 
-マルチャーナの最終版LoRAの配置先です。既存ファイルはサイズとSHA256を確認して再利用します。
+キャラLoRAの配置先です。既存ファイルはサイズとSHA256を確認して再利用します。
 
 ```text
 /workspace/moss-image-runtime/ComfyUI/models/loras/mossimage_lora_marciana_marine_study_30_v1.safetensors
+/workspace/moss-image-runtime/ComfyUI/models/loras/mossimage_lora_marciana_marine_study.safetensors
+/workspace/moss-image-runtime/ComfyUI/models/loras/mossimage_lora_marian_last_affection2_3k.safetensors
 ```
 
 配置後、start.shを実行してください。完全なファイルがあれば再取得しません。学習画像・LoRA本体・トークンはこのGitHubリポジトリに含めていません。
@@ -67,8 +69,8 @@ cd /workspace/MossImage && bash background.sh
 ## 3. 生成する
 
 1. **Connect → 7860** で通常のComfyUIを開く。
-2. **Workflows** で **MOSS_10 Fast2x** または **MOSS_08 Quality2x** を選ぶ。
-3. 緑の欄でトリガー `m4rc14n4m4r1ne` を残し、プロンプトを変更する。
+2. **Workflows** で使いたいキャラの **MOSS_10 Fast2x** または **MOSS_08 Quality2x** を選ぶ。
+3. 緑の欄でトリガー（マリアンは `m4r14nl4st2`、マルチャーナは `m4rc14n4m4r1ne`）を残し、プロンプトを変更する。
 4. **Run** を押す。元画像と2倍仕上げ版がそれぞれ **Save Image** に表示され、PNGが自動保存される。
 
 既存Podを更新すると、以前同梱していたワークフローは `ComfyUI/user/default/moss-workflow-archive/` に退避します。生成済みのPNGやLoRAはそのまま使えます。

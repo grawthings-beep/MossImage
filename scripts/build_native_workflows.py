@@ -1,5 +1,6 @@
 """Rebuild native ComfyUI workflows (stdlib only; no model execution)."""
 import json
+from copy import deepcopy
 from pathlib import Path
 import uuid
 
@@ -30,22 +31,22 @@ def write(data, filename):
     (FOLDER / filename).write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
 
 
-def write_marciana(filename, width, height, output_folder, pin):
-    data = json.loads(Path(__file__).with_name('marciana_base.json').read_text(encoding='utf-8'))
+def model_metadata(pin):
+    return {'name': pin['file'], 'directory': Path(pin['destination']).parent.as_posix(),
+            'url': f"https://huggingface.co/{pin['repo']}/resolve/{pin['revision']}/{pin['file']}"}
+
+
+def write_variant(data, filename, width, height, prefix, instructions, pin):
     nodes = {n['id']: n for n in data['nodes']}
     nodes[6].update(title=f'生成サイズ：{width} × {height}', widgets_values=[width, height, 1])
-    prefix = f'MOSS/Marciana/{output_folder}'
     nodes[9].update(title='元画像を保存', pos=[1790, 375], size=[330, 460], widgets_values=[prefix + '/base'])
     nodes[15]['widgets_values'] = [
-        f'マルチャーナ：マリンスタディ。緑の欄で m4rc14n4m4r1ne を残してRun。\n'
+        f'{instructions}\n'
         f'{width}×{height}・12 stepsで生成し、{width*2}×{height*2}の仕上げ版も保存します。\n'
         '候補だけを作るときは「仕上げ版を保存」をミュート。細い線を戻すには「元画像を混ぜる割合」を上げます。']
     loader = node(20, 'UpscaleModelLoader', '軽量2倍モデル', [2140, 380], [350, 65],
                   outputs=[('UPSCALE_MODEL', 'UPSCALE_MODEL')], widgets=[pin['file']])
-    loader['properties']['models'] = [{
-        'name': pin['file'], 'directory': 'upscale_models',
-        'url': f"https://huggingface.co/{pin['repo']}/resolve/{pin['revision']}/{pin['file']}",
-    }]
+    loader['properties']['models'] = [model_metadata(pin)]
     data['nodes'].extend([
         loader,
         node(19, 'ImageBlur', '拡大前の粒状感を抑える（半径0でオフ）', [2140, 90], [350, 115],
@@ -65,7 +66,30 @@ def write_marciana(filename, width, height, output_folder, pin):
     write(data, filename)
 
 
+def write_pair(slug, name, version, trigger, folder, lora, upscale, prompt=None):
+    template = json.loads(Path(__file__).with_name('marciana_base.json').read_text(encoding='utf-8'))
+    nodes = {n['id']: n for n in template['nodes']}
+    if prompt is not None:
+        nodes[4]['widgets_values'] = [prompt]
+    nodes[10].update(title=f'{name} LoRA（{version}）', widgets_values=[lora['file'], 1.0])
+    nodes[10]['properties']['models'] = [model_metadata(lora)]
+    instructions = f'{name}。緑の欄で {trigger} を残してRun。'
+    for number, mode, width, height in [('10', 'Fast', 864, 1152), ('08', 'Quality', 1152, 1536)]:
+        filename = f'MOSS_{number}_{mode}2x_{slug}.json'
+        write_variant(deepcopy(template), filename, width, height, f'MOSS/{folder}/{mode}', instructions, upscale)
+
+
 if __name__ == '__main__':
-    pin = json.loads((ROOT / 'studio/models.json').read_text(encoding='utf-8'))['upscale_2x']
-    write_marciana('MOSS_10_Fast2x_marciana_marine_study_30_v1.json', 864, 1152, 'Fast', pin)
-    write_marciana('MOSS_08_Quality2x_marciana_marine_study_30_v1.json', 1152, 1536, 'Quality', pin)
+    pins = json.loads((ROOT / 'studio/models.json').read_text(encoding='utf-8'))
+    upscale = pins['upscale_2x']
+    write_pair('marciana_marine_study_30_v1', 'マルチャーナ：マリンスタディ', '30枚版 v1',
+               'm4rc14n4m4r1ne', 'Marciana', pins['marciana_marine_study'], upscale)
+    write_pair('marciana_marine_study_original_33', 'マルチャーナ：マリンスタディ', '元の33枚版',
+               'm4rc14n4m4r1ne', 'Marciana/Original33', pins['marciana_marine_study_original'], upscale)
+    write_pair('marian_last_affection2_3k', 'マリアン：ラストアフェクション', '3000ステップ',
+               'm4r14nl4st2', 'Marian/LastAffection', pins['marian_last_affection2_3k'], upscale,
+               'masterpiece, best quality, highres, m4r14nl4st2, an anime illustration. '
+               'A bride pauses on the stone steps of a chapel at dusk and smiles over her shoulder. '
+               'She lifts the ruffled train of her white wedding dress with one gloved hand. '
+               'The breeze draws her translucent veil to one side, revealing her lavender hair ribbon. '
+               'Her blue pendant catches the last light. Full-length three-quarter view.')

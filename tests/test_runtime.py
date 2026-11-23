@@ -16,11 +16,15 @@ from prepare_comfy import RETIRED_WORKFLOWS, install_workflows, valid_weights, p
 
 
 class FileTests(unittest.TestCase):
-    def test_only_marciana_models_are_prepared(self):
+    def test_generation_models_are_prepared(self):
         with tempfile.TemporaryDirectory() as directory, patch('studio.assets.Downloads.ensure') as ensure:
             prepare_generation_model(Path(directory))
             self.assertEqual([call.args[0] for call in ensure.call_args_list],
-                             ['cottonmoss', 'marciana_marine_study', 'upscale_2x'])
+                             ['cottonmoss', 'sft', 'marciana_marine_study', 'marciana_marine_study_original',
+                              'marian_last_affection2_3k', 'upscale_2x'])
+            pins = Path(__file__).resolve().parents[1] / 'comfy-revisions.json'
+            self.assertIn('diffusion_models/moss_image_base_bf16.safetensors',
+                          json.loads(pins.read_text(encoding='utf-8'))['model_files'])
 
     def test_truncated_download_is_not_accepted(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -52,8 +56,8 @@ class FileTests(unittest.TestCase):
                 (folder / filename).write_text('previous edit')
             install_workflows(root)
             kept = sorted(folder.glob('MOSS_*.json'))
-            self.assertEqual(len(kept), 2)
-            self.assertTrue(all('marciana_marine_study' in p.name for p in kept))
+            bundled = Path(__file__).resolve().parents[1] / 'workflows'
+            self.assertEqual({p.name for p in kept}, {p.name for p in bundled.glob('*.json')})
             kept[0].write_text('current edit')
             install_workflows(root)
             self.assertEqual(kept[0].read_text(), 'current edit')
@@ -61,7 +65,7 @@ class FileTests(unittest.TestCase):
             self.assertEqual((archive / previous).read_text(), 'older')
             self.assertEqual((archive / f'{Path(previous).stem}-1.json').read_text(), 'previous edit')
             self.assertEqual(len(list(archive.iterdir())), len(RETIRED_WORKFLOWS) + 1)
-            self.assertEqual(len(list(folder.iterdir())), 3)
+            self.assertEqual(len(list(folder.iterdir())), len(kept) + 1)
 
 
 class ProxyTests(unittest.IsolatedAsyncioTestCase):
