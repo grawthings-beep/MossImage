@@ -38,6 +38,8 @@ RETIRED_WORKFLOWS = (
     'MOSS_07_CottonMoss_scarlet_goddeath_1152x1536_12.json',
     'MOSS_08_CottonMoss_marciana_marine_study_1152x1536_12.json',
     'MOSS_09_CottonMoss_realskin_1152x1536_12.json',
+    'MOSS_08_Quality2x_marciana_marine_study.json',
+    'MOSS_10_Fast2x_marciana_marine_study.json',
 )
 
 
@@ -69,7 +71,7 @@ def prepare_generation_model(runtime):
     from studio.assets import Downloads
     downloads = Downloads(runtime)
     for name, label in [('cottonmoss', 'CottonMoss Turbo INT8'),
-                        ('marciana_marine_study', 'マルチャーナの最終版LoRA'),
+                        ('marciana_marine_study', 'マルチャーナの30枚版LoRA'),
                         ('upscale_2x', '2倍アップスケールモデル')]:
         print(f'MOSS_STAGE={label}を準備しています', flush=True)
         downloads.ensure(name)

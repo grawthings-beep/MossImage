@@ -29,7 +29,7 @@ CottonMossは指定された [Hugging Faceのファイル](https://huggingface.c
 - 漫画スタジオ・独自の画像生成画面は廃止。旧 `/studio/`、`/studio/image` はComfyUIへ転送します。保存済みの画像とファイルは維持します。
 - ファイル: イメージにJupyterLabがあれば8888も自動起動します。新たに起動したJupyterのログイントークンは `MOSS_PASSWORD` と同じです。既存の8888サービスは停止・置き換えしません。
 
-マルチャーナのLoRAは `mossimage_lora_marciana_marine_study.safetensors`、トリガーは `m4rc14n4m4r1ne` です。
+マルチャーナの30枚版LoRAは `mossimage_lora_marciana_marine_study_30_v1.safetensors`、トリガーは `m4rc14n4m4r1ne` です。
 
 LoRA学習がGPUを使用中なら、起動画面で学習の終了を待ちます。学習を勝手に中断しません。生成から学習へ切り替える既存の `background.sh --stop` も使用できます。
 

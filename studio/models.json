@@ -11,11 +11,11 @@
   "marciana_marine_study": {
     "repo": "uwgm/Moss",
     "revision": "main",
-    "file": "mossimage_lora_marciana_marine_study.safetensors",
+    "file": "mossimage_lora_marciana_marine_study_30_v1.safetensors",
     "token_env": "HF_TOKEN",
-    "destination": "loras/mossimage_lora_marciana_marine_study.safetensors",
-    "size": 74404744,
-    "sha256": "e530f72e177ed40a15f8ed31452e522f7a11a3de0a8036b7ce70be9d6e8b0261"
+    "destination": "loras/mossimage_lora_marciana_marine_study_30_v1.safetensors",
+    "size": 74404760,
+    "sha256": "60d485f2093bd7018e841b8f00e68f1b1d8b7de85e9d962c414a6b89bf10b603"
   },
   "realskin": {
     "repo": "uwgm/Moss",

@@ -69,8 +69,8 @@ class BootTests(unittest.TestCase):
 
     def test_marciana_workflows_generate_once_and_save_both_resolutions(self):
         root = Path(__file__).resolve().parents[1]
-        sizes = {'MOSS_08_Quality2x_marciana_marine_study.json': [1152, 1536, 1],
-                 'MOSS_10_Fast2x_marciana_marine_study.json': [864, 1152, 1]}
+        sizes = {'MOSS_08_Quality2x_marciana_marine_study_30_v1.json': [1152, 1536, 1],
+                 'MOSS_10_Fast2x_marciana_marine_study_30_v1.json': [864, 1152, 1]}
         self.assertEqual({p.name for p in (root/'workflows').glob('*.json')}, set(sizes))
         for filename, size in sizes.items():
             with self.subTest(filename=filename):
@@ -78,6 +78,11 @@ class BootTests(unittest.TestCase):
                 nodes = {n['id']: n for n in data['nodes']}
                 self.assertEqual(nodes[1]['widgets_values'][0], PINS['cottonmoss']['file'])
                 self.assertEqual(nodes[10]['widgets_values'], [PINS['marciana_marine_study']['file'], 1.0])
+                lora = PINS['marciana_marine_study']
+                self.assertEqual(nodes[10]['properties']['models'], [{
+                    'directory': 'loras', 'name': lora['file'],
+                    'url': f"https://huggingface.co/{lora['repo']}/resolve/{lora['revision']}/{lora['file']}",
+                }])
                 self.assertEqual(nodes[20]['widgets_values'], [PINS['upscale_2x']['file']])
                 self.assertIn('m4rc14n4m4r1ne', nodes[4]['widgets_values'][0])
                 self.assertEqual(nodes[6]['widgets_values'], size)

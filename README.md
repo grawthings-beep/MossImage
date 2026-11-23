@@ -59,7 +59,7 @@ cd /workspace/MossImage && bash background.sh
 マルチャーナの最終版LoRAの配置先です。既存ファイルはサイズとSHA256を確認して再利用します。
 
 ```text
-/workspace/moss-image-runtime/ComfyUI/models/loras/mossimage_lora_marciana_marine_study.safetensors
+/workspace/moss-image-runtime/ComfyUI/models/loras/mossimage_lora_marciana_marine_study_30_v1.safetensors
 ```
 
 配置後、start.shを実行してください。完全なファイルがあれば再取得しません。学習画像・LoRA本体・トークンはこのGitHubリポジトリに含めていません。

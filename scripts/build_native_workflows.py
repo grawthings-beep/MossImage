@@ -67,5 +67,5 @@ def write_marciana(filename, width, height, output_folder, pin):
 
 if __name__ == '__main__':
     pin = json.loads((ROOT / 'studio/models.json').read_text(encoding='utf-8'))['upscale_2x']
-    write_marciana('MOSS_10_Fast2x_marciana_marine_study.json', 864, 1152, 'Fast', pin)
-    write_marciana('MOSS_08_Quality2x_marciana_marine_study.json', 1152, 1536, 'Quality', pin)
+    write_marciana('MOSS_10_Fast2x_marciana_marine_study_30_v1.json', 864, 1152, 'Fast', pin)
+    write_marciana('MOSS_08_Quality2x_marciana_marine_study_30_v1.json', 1152, 1536, 'Quality', pin)

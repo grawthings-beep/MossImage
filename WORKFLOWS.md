@@ -4,8 +4,8 @@ RunPodの **Connect → 7860 → Workflows** からどちらかを開きます�
 
 | ワークフロー | 用途 | 元画像 → 仕上げ版 |
 |---|---|---|
-| [MOSS_10 Fast2x](workflows/MOSS_10_Fast2x_marciana_marine_study.json) | 構図や衣装を速く試す | 864×1152 → 1728×2304 |
-| [MOSS_08 Quality2x](workflows/MOSS_08_Quality2x_marciana_marine_study.json) | 全身絵や、小さく写る目元の細部を優先する | 1152×1536 → 2304×3072 |
+| [MOSS_10 Fast2x（30枚版 v1）](workflows/MOSS_10_Fast2x_marciana_marine_study_30_v1.json) | 構図や衣装を速く試す | 864×1152 → 1728×2304 |
+| [MOSS_08 Quality2x（30枚版 v1）](workflows/MOSS_08_Quality2x_marciana_marine_study_30_v1.json) | 全身絵や、小さく写る目元の細部を優先する | 1152×1536 → 2304×3072 |
 
 どちらもCottonMoss Turbo INT8、マルチャーナの最終版LoRA（強度1.0）、12 steps、CFG 3、er_sde / simple、SLG layer 22（前半50%）で一度生成します。Fast版は、拡散で処理する画素数がQuality版より約44%少なくなります。生成サイズを変えると同じseedでも構図は変わります。[CottonMoss作者の設定](https://civitai.red/models/3026318/cottonmoss?modelVersionId=3437076)
 

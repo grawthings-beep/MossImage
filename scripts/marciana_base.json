@@ -382,7 +382,7 @@
       "flags": {},
       "order": 4,
       "mode": 0,
-      "title": "マルチャーナ：マリンスタディ LoRA",
+      "title": "マルチャーナ：マリンスタディ LoRA（30枚版 v1）",
       "inputs": [
         {
           "name": "model",
@@ -404,14 +404,14 @@
         "Node name for S&R": "LoraLoaderModelOnly",
         "models": [
           {
-            "name": "mossimage_lora_marciana_marine_study.safetensors",
+            "name": "mossimage_lora_marciana_marine_study_30_v1.safetensors",
             "directory": "loras",
-            "url": "https://huggingface.co/uwgm/Moss/resolve/main/mossimage_lora_marciana_marine_study.safetensors"
+            "url": "https://huggingface.co/uwgm/Moss/resolve/main/mossimage_lora_marciana_marine_study_30_v1.safetensors"
           }
         ]
       },
       "widgets_values": [
-        "mossimage_lora_marciana_marine_study.safetensors",
+        "mossimage_lora_marciana_marine_study_30_v1.safetensors",
         1.0
       ]
     },
