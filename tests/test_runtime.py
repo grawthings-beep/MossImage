@@ -12,31 +12,15 @@ from aiohttp.test_utils import TestClient, TestServer
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from launch import credentials
 from launch_comfy import proxy_app
-from prepare_comfy import install_workflow, valid_weights, prepare_image_tools, prepare_generation_model
-from studio.assets import PINS
+from prepare_comfy import RETIRED_WORKFLOWS, install_workflows, valid_weights, prepare_generation_model
 
 
 class FileTests(unittest.TestCase):
-    def test_native_workflows_prepare_all_required_models_and_preserve_saved_edits(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            with patch('studio.assets.Downloads.ensure') as ensure:
-                prepare_generation_model(root)
-                prepare_image_tools(root)
-                self.assertEqual([call.args[0] for call in ensure.call_args_list],
-                                 ['cottonmoss', 'marciana_marine_study', 'realskin', 'charref', 'sft', 'edit'])
-                files = sorted((root/'ComfyUI/user/default/workflows').glob('MOSS_0*.json'))
-                self.assertEqual(len(files), 9)
-                for path, preset in zip(files[-2:], ['marciana_marine_study', 'realskin']):
-                    nodes = {n['id']: n for n in json.loads(path.read_text(encoding='utf-8'))['nodes']}
-                    self.assertEqual(nodes[10]['widgets_values'], [PINS[preset]['file'], 1.0])
-                    self.assertEqual(nodes[1]['widgets_values'][0], PINS['cottonmoss']['file'])
-                    self.assertEqual(nodes[7]['widgets_values'][2:6], [12, 3.0, 'er_sde', 'simple'])
-                    self.assertEqual(nodes[6]['widgets_values'], [1152, 1536, 1])
-                    self.assertEqual('m4rc14n4m4r1ne' in nodes[4]['widgets_values'][0], preset == 'marciana_marine_study')
-                files[-1].write_text('{"user_edit": true}')
-                prepare_image_tools(root)
-                self.assertEqual(json.loads(files[-1].read_text()), {'user_edit': True})
+    def test_only_marciana_models_are_prepared(self):
+        with tempfile.TemporaryDirectory() as directory, patch('studio.assets.Downloads.ensure') as ensure:
+            prepare_generation_model(Path(directory))
+            self.assertEqual([call.args[0] for call in ensure.call_args_list],
+                             ['cottonmoss', 'marciana_marine_study', 'upscale_2x'])
 
     def test_truncated_download_is_not_accepted(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -50,18 +34,34 @@ class FileTests(unittest.TestCase):
             path.write_text("<html>authentication required</html>")
             self.assertFalse(valid_weights(path))
 
-    def test_existing_login_and_workflow_are_preserved(self):
+    def test_existing_login_and_saved_workflows_survive_migration_and_restarts(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            login = credentials(root / "login.json")
-            self.assertEqual(credentials(root / "login.json"), login)
-            pins = {"workflow_file": "moss_marian_queen2.json"}
-            install_workflow(root, pins)
-            path = root / "user/default/workflows/moss_marian_queen2.json"
-            self.assertGreater(len(json.loads(path.read_text(encoding="utf-8"))["nodes"]), 0)
-            path.write_text('{"user_edit": true}')
-            install_workflow(root, pins)
-            self.assertEqual(json.loads(path.read_text()), {"user_edit": True})
+            login = credentials(root / 'login.json')
+            self.assertEqual(credentials(root / 'login.json'), login)
+            profile = root / 'user/default'
+            folder = profile / 'workflows'
+            folder.mkdir(parents=True)
+            custom = folder / 'my_workflow.json'
+            custom.write_text('personal')
+            archive = profile / 'moss-workflow-archive'
+            archive.mkdir()
+            previous = RETIRED_WORKFLOWS[0]
+            (archive / previous).write_text('older')
+            for filename in RETIRED_WORKFLOWS:
+                (folder / filename).write_text('previous edit')
+            install_workflows(root)
+            kept = sorted(folder.glob('MOSS_*.json'))
+            self.assertEqual(len(kept), 2)
+            self.assertTrue(all('marciana_marine_study' in p.name for p in kept))
+            kept[0].write_text('current edit')
+            install_workflows(root)
+            self.assertEqual(kept[0].read_text(), 'current edit')
+            self.assertEqual(custom.read_text(), 'personal')
+            self.assertEqual((archive / previous).read_text(), 'older')
+            self.assertEqual((archive / f'{Path(previous).stem}-1.json').read_text(), 'previous edit')
+            self.assertEqual(len(list(archive.iterdir())), len(RETIRED_WORKFLOWS) + 1)
+            self.assertEqual(len(list(folder.iterdir())), 3)
 
 
 class ProxyTests(unittest.IsolatedAsyncioTestCase):

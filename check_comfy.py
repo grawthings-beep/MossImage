@@ -21,19 +21,17 @@ def main():
     assert hasattr(CLIPType, "MOSS_IMAGE"), "ComfyUI has no native MOSS support."
     assert "moss_image" in nodes.CLIPLoader.INPUT_TYPES()["required"]["type"][0]
 
-    # The single-image workflow and Manga Studio use native nodes only.
-    for module_name in ("comfy_extras.nodes_flux", "comfy_extras.nodes_slg", "comfy_extras.nodes_moss_image"):
+    for module_name in ("comfy_extras.nodes_flux", "comfy_extras.nodes_slg",
+                        "comfy_extras.nodes_post_processing", "comfy_extras.nodes_upscale_model"):
         module = importlib.import_module(module_name)
         extension = asyncio.run(module.comfy_entrypoint())
         for node in asyncio.run(extension.get_node_list()):
             nodes.NODE_CLASS_MAPPINGS[node.define_schema().node_id] = node
-    workflow = json.loads(
-        (Path(__file__).parent / "workflows/moss_marian_queen2.json").read_text(encoding="utf-8")
-    )
-    for node in workflow["nodes"]:
-        assert node["type"] in nodes.NODE_CLASS_MAPPINGS, node["type"]
-    assert 'TextEncodeMOSSImageEdit' in nodes.NODE_CLASS_MAPPINGS
-    assert 'LoadImage' in nodes.NODE_CLASS_MAPPINGS
+    for path in (Path(__file__).parent / "workflows").glob("*.json"):
+        workflow = json.loads(path.read_text(encoding="utf-8"))
+        for node in workflow["nodes"]:
+            if node["type"] != "Note":
+                assert node["type"] in nodes.NODE_CLASS_MAPPINGS, node["type"]
     print("Native MOSS loaders and all workflow nodes: OK")
 
 

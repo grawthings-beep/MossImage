@@ -13,7 +13,7 @@ import urllib.request
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from launch import credentials
 from pod_boot import progress_server, run_setup
-from characters import CHARACTERS
+from studio.assets import PINS
 
 
 class BootTests(unittest.TestCase):
@@ -67,14 +67,27 @@ class BootTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
 
-    def test_both_exported_workflows_have_the_requested_lora_size_and_steps(self):
+    def test_marciana_workflows_generate_once_and_save_both_resolutions(self):
         root = Path(__file__).resolve().parents[1]
-        for c in CHARACTERS.values():
-            with self.subTest(character=c['name']):
-                data = json.loads((root/'workflows'/c['workflow']).read_text(encoding='utf-8'))
-                nodes = {n['type']: n for n in data['nodes']}
-                self.assertEqual(nodes['LoraLoaderModelOnly']['widgets_values'][0], c['file'])
-                self.assertEqual(nodes['EmptyFlux2LatentImage']['widgets_values'], [1152, 1536, 1])
-                self.assertEqual(nodes['KSampler']['widgets_values'][2:6], [25, 2.5, 'er_sde', 'simple'])
-                positive = next(n for n in data['nodes'] if n['id'] == 4)
-                self.assertIn(c['trigger'], positive['widgets_values'][0])
+        sizes = {'MOSS_08_Quality2x_marciana_marine_study.json': [1152, 1536, 1],
+                 'MOSS_10_Fast2x_marciana_marine_study.json': [864, 1152, 1]}
+        self.assertEqual({p.name for p in (root/'workflows').glob('*.json')}, set(sizes))
+        for filename, size in sizes.items():
+            with self.subTest(filename=filename):
+                data = json.loads((root/'workflows'/filename).read_text(encoding='utf-8'))
+                nodes = {n['id']: n for n in data['nodes']}
+                self.assertEqual(nodes[1]['widgets_values'][0], PINS['cottonmoss']['file'])
+                self.assertEqual(nodes[10]['widgets_values'], [PINS['marciana_marine_study']['file'], 1.0])
+                self.assertEqual(nodes[20]['widgets_values'], [PINS['upscale_2x']['file']])
+                self.assertIn('m4rc14n4m4r1ne', nodes[4]['widgets_values'][0])
+                self.assertEqual(nodes[6]['widgets_values'], size)
+                self.assertEqual(nodes[7]['widgets_values'][2:6], [12, 3.0, 'er_sde', 'simple'])
+                self.assertEqual(sum(n['type'] == 'KSampler' for n in nodes.values()), 1)
+                self.assertEqual(nodes[19]['widgets_values'], [1, 0.7])
+                self.assertEqual(nodes[22]['widgets_values'], [0.25, 'normal'])
+                self.assertTrue(nodes[9]['widgets_values'][0].endswith('/base'))
+                self.assertTrue(nodes[23]['widgets_values'][0].endswith('/final'))
+                expected = {(8,0,9,0), (8,0,19,0), (20,0,21,0), (19,0,21,1),
+                            (21,0,22,0), (8,0,22,1), (22,0,23,0)}
+                self.assertEqual({tuple(link[1:5]) for link in data['links']
+                                  if link[3] in (9, 19, 21, 22, 23)}, expected)

@@ -1,5 +1,4 @@
 """Rebuild native ComfyUI workflows (stdlib only; no model execution)."""
-import copy
 import json
 from pathlib import Path
 import uuid
@@ -31,128 +30,42 @@ def write(data, filename):
     (FOLDER / filename).write_text(json.dumps(data, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
 
 
-def reference_workflow(base, edit=False):
-    data = copy.deepcopy(base)
+def write_marciana(filename, width, height, output_folder, pin):
+    data = json.loads(Path(__file__).with_name('marciana_base.json').read_text(encoding='utf-8'))
     nodes = {n['id']: n for n in data['nodes']}
-    nodes[1]['widgets_values'][0] = 'moss_image_sft_bf16.safetensors' if edit else 'moss_image_base_bf16.safetensors'
-    nodes[1]['title'] = 'MOSS-Image SFT' if edit else 'MOSS-Image Base'
-    nodes[1]['properties'].pop('models', None)
-    nodes[10]['widgets_values'] = ['moss_edit_armV5.safetensors' if edit else 'moss_image_charref_v2.safetensors', 1.0]
-    nodes[10]['title'] = 'Edit HQ v5' if edit else 'CharRef v2（キャラLoRA不要）'
-    nodes[10]['properties'].pop('models', None)
-    prompt = ('Change her outfit to a black evening dress. Keep her face, hair, pose, background and composition unchanged.' if edit else
-              'Same character and art style as Picture 1. Preserve her face, eye color and hairstyle. '
-              'She wears a black evening dress and sits sideways on a balcony, looking back toward the viewer. '
-              'Night city lights, wind-blown hair, cinematic lighting. One complete illustration.')
-    for key, positive in [(4, True), (5, False)]:
-        nodes[key] = node(key, 'TextEncodeMOSSImageEdit', '② 変更したい内容' if edit and positive else '② 新しい衣装・ポーズ・場面' if positive else 'Negative（空欄のまま）',
-                          [800, 350 if positive else 700], [520, 290 if positive else 180],
-                          [('clip', 'CLIP'), ('images.image_0', 'IMAGE'), ('images.image_1', 'IMAGE'), ('vae', 'VAE')],
-                          [('CONDITIONING', 'CONDITIONING')], [prompt if positive else '', 'ai-toolkit', 1.0])
-        nodes[key]['inputs'][2]['shape'] = 7
-        nodes[key]['inputs'][3]['shape'] = 7
-    nodes[12] = node(12, 'LoadImage', '① 元画像をアップロード', [0, 760], [350, 420], outputs=[('IMAGE', 'IMAGE'), ('MASK', 'MASK')], widgets=['', 'image'])
-    nodes[13] = node(13, 'ImageScaleToTotalPixels', '参照画像を約1MP・16px単位に調整', [400, 760], [350, 130],
-                     [('image', 'IMAGE')], [('IMAGE', 'IMAGE')], ['lanczos', 1.0, 16])
-    positions = {1:[0,100],2:[0,320],3:[0,560],10:[400,100],11:[800,100],6:[1400,800],7:[1400,200],8:[1800,220],9:[2100,200]}
-    for key, pos in positions.items(): nodes[key]['pos'] = pos
-    nodes[9]['widgets_values'] = ['MOSS/EditHQ_v5' if edit else 'MOSS/CharRef']
-    nodes[7]['title'] = '③ Runで生成（25ステップ）'
-    nodes[6]['title'] = '出力：元画像の比率・約1MP' if edit else '出力：1152 × 1536'
-    nodes[4]['color'], nodes[4]['bgcolor'] = '#232', '#353'
-    nodes[12]['color'], nodes[12]['bgcolor'] = '#223', '#335'
-    def connect(source, slot, target, target_slot, kind):
-        data['links'].append([max(x[0] for x in data['links'])+1, source, slot, target, target_slot, kind])
-    connect(12,0,13,0,'IMAGE')
-    for target in (4,5):
-        connect(13,0,target,1,'IMAGE')
-        connect(3,0,target,3,'VAE')
-    if edit:
-        nodes[14] = node(14, 'GetImageSize', '元画像の縦横比を保持', [800,1000], [310,100], [('image','IMAGE')], [('width','INT'),('height','INT'),('batch_size','INT')])
-        nodes[6]['inputs'] = [{'name':key,'type':'INT','widget':{'name':key},'link':None} for key in ('width','height')]
-        connect(13,0,14,0,'IMAGE');connect(14,0,6,0,'INT');connect(14,1,6,1,'INT')
-    note = ('画像編集：①画像を選択 → ②変更内容を記入 → Run。元画像の縦横比で約1MPに調整して編集します。'
-            if edit else 'キャラ参照：①画像を選択 → ②新しい服・ポーズ・行動を記入 → Run。出力は1152×1536。')
-    note += '\n25ステップが初期値。作者の比較用設定：50 steps / CFG 3 / euler / sgm_uniform、SLG end_percent 1.0。\n正負両方の参照画像接続と ai-toolkit は維持してください。顔や髪の完全一致は保証されません。'
-    nodes[15] = node(15, 'Note', '使い方', [0,-230], [740,220], widgets=[note])
-    data['nodes'] = list(nodes.values())
-    return data
+    nodes[6].update(title=f'生成サイズ：{width} × {height}', widgets_values=[width, height, 1])
+    prefix = f'MOSS/Marciana/{output_folder}'
+    nodes[9].update(title='元画像を保存', pos=[1790, 375], size=[330, 460], widgets_values=[prefix + '/base'])
+    nodes[15]['widgets_values'] = [
+        f'マルチャーナ：マリンスタディ。緑の欄で m4rc14n4m4r1ne を残してRun。\n'
+        f'{width}×{height}・12 stepsで生成し、{width*2}×{height*2}の仕上げ版も保存します。\n'
+        '候補だけを作るときは「仕上げ版を保存」をミュート。細い線を戻すには「元画像を混ぜる割合」を上げます。']
+    loader = node(20, 'UpscaleModelLoader', '軽量2倍モデル', [2140, 380], [350, 65],
+                  outputs=[('UPSCALE_MODEL', 'UPSCALE_MODEL')], widgets=[pin['file']])
+    loader['properties']['models'] = [{
+        'name': pin['file'], 'directory': 'upscale_models',
+        'url': f"https://huggingface.co/{pin['repo']}/resolve/{pin['revision']}/{pin['file']}",
+    }]
+    data['nodes'].extend([
+        loader,
+        node(19, 'ImageBlur', '拡大前の粒状感を抑える（半径0でオフ）', [2140, 90], [350, 115],
+             [('image', 'IMAGE')], [('IMAGE', 'IMAGE')], [1, 0.7]),
+        node(21, 'ImageUpscaleWithModel', '2倍に拡大', [2540, 230], [250, 85],
+             [('upscale_model', 'UPSCALE_MODEL'), ('image', 'IMAGE')], [('IMAGE', 'IMAGE')]),
+        node(22, 'ImageBlend', '元画像を混ぜる割合', [2860, 90], [290, 130],
+             [('image1', 'IMAGE'), ('image2', 'IMAGE')], [('IMAGE', 'IMAGE')], [0.25, 'normal']),
+        node(23, 'SaveImage', '仕上げ版を保存（2倍）', [3230, 75], [420, 520],
+             [('images', 'IMAGE')], widgets=[prefix + '/final']),
+    ])
+    connections = [(8, 0, 19, 0, 'IMAGE'), (20, 0, 21, 0, 'UPSCALE_MODEL'), (19, 0, 21, 1, 'IMAGE'),
+                   (21, 0, 22, 0, 'IMAGE'), (8, 0, 22, 1, 'IMAGE'), (22, 0, 23, 0, 'IMAGE')]
+    first = max(link[0] for link in data['links']) + 1
+    for link_id, connection in enumerate(connections, first):
+        data['links'].append([link_id, *connection])
+    write(data, filename)
 
 
-def cotton_workflow(base, character=None, usage=None):
-    data = copy.deepcopy(base)
-    nodes = {n['id']: n for n in data['nodes']}
-    nodes[1]['title'] = 'CottonMoss Turbo INT8'
-    nodes[1]['widgets_values'] = ['cottonmoss_baseTurboTestInt8.safetensors', 'default']
-    nodes[1]['properties'].pop('models', None)
-    nodes[7]['widgets_values'][2:6] = [12, 3.0, 'er_sde', 'simple']
-    nodes[7]['title'] = '生成設定：12 steps / CFG 3（作者推奨）'
-    quality = 'masterpiece, best quality, highres, absurdres, '
-    if not character:
-        nodes[4]['title'] = 'プロンプト（先頭の品質タグを残す）'
-    nodes[4]['widgets_values'][0] = quality + (nodes[4]['widgets_values'][0] if character else
-        'An anime illustration of an adult woman with silver hair and red eyes, wearing a black evening dress, '
-        'standing on a balcony above a neon-lit city at night. Flowing hair, detailed fabric, dramatic rim lighting.')
-    nodes[5]['widgets_values'] = ['worst quality, low quality, blurry, jpeg artifacts, sepia, username, watermark']
-    nodes[4]['color'], nodes[4]['bgcolor'] = '#232', '#353'
-    nodes[9]['widgets_values'] = ['MOSS/CottonMoss/' + (character or 'text')]
-    if not character:
-        # No character LoRA in the plain checkpoint workflow.
-        del nodes[10]
-        data['links'] = [link for link in data['links'] if link[3] != 10]
-        for link in data['links']:
-            if link[1] == 10:
-                link[1] = 1
-    nodes[15] = node(15, 'Note', 'CottonMossの使い方', [30,730], [740,180], widgets=[
-        'CottonMoss base_turbo_test_int8：1152×1536、12 steps、CFG 3、er_sde / simple。\n'
-        '緑のテキスト欄を変更してRun。品質タグは先頭に置きます。\n'
-        + (usage or ('キャラLoRAは強度1.0から開始。顔の再現や最適強度は実画像で確認してください。' if character else
-                     'マリアンは06、紅蓮は07、マルチャーナは08、実写肌のRealSkinは09を開いてください。'))])
-    data['nodes'] = list(nodes.values())
-    return data
-
-
-def write_cotton_lora(base, pins, preset, number, title, prompt, usage):
-    data = copy.deepcopy(base)
-    nodes = {n['id']: n for n in data['nodes']}
-    pin = pins[preset]
-    loader = nodes[10]
-    loader['title'] = title
-    loader['widgets_values'] = [pin['file'], 1.0]
-    loader['properties']['models'] = [{'name': pin['file'], 'directory': 'loras',
-                                       'url': f"https://huggingface.co/{pin['repo']}/resolve/{pin['revision']}/{pin['file']}"}]
-    nodes[4]['title'] = 'プロンプト（人物・場面・光）'
-    nodes[4]['widgets_values'] = [prompt]
-    write(cotton_workflow(data, preset, usage), f'MOSS_{number:02}_CottonMoss_{preset}_1152x1536_12.json')
-
-
-def main():
-    for name, number in [('scarlet_goddeath',1), ('marian_queen2',2)]:
-        data=json.loads((FOLDER/f'moss_{name}_1152x1536_25.json').read_text(encoding='utf-8'))
-        by_id={n['id']:n for n in data['nodes']}
-        by_id[6]['title']='画像サイズ：1152 × 1536'
-        by_id[7]['title']='生成設定：25 steps / CFG 2.5'
-        by_id[11]['title']='SLG：22 / 前半50%'
-        write(data,f'MOSS_0{number}_{name}_1152x1536_25.json')
-        if number==1: base=copy.deepcopy(data)
-        cotton_number = 7 if number == 1 else 6
-        write(cotton_workflow(data, name), f'MOSS_0{cotton_number}_CottonMoss_{name}_1152x1536_12.json')
-    write(cotton_workflow(base), 'MOSS_05_CottonMoss_1152x1536_12.json')
-    pins = json.loads((ROOT / 'studio/models.json').read_text(encoding='utf-8'))
-    write_cotton_lora(base, pins, 'marciana_marine_study', 8, 'マルチャーナ：マリンスタディ LoRA',
-                      'm4rc14n4m4r1ne, an anime illustration of an adult lifeguard standing beneath a wooden pier. '
-                      'She turns toward the viewer, one hand shading her eyes at the brim of a translucent pink visor. '
-                      'A silver star earring catches the light. She wears a glossy red one-piece swimsuit with a white cross. '
-                      'Sunlight reflected from the sea ripples across the pier posts. Waist-up portrait.',
-                      'トリガー m4rc14n4m4r1ne を残して、衣装・ポーズ・背景を変更できます。')
-    write_cotton_lora(base, pins, 'realskin', 9, 'RealSkin v1.0 スタイルLoRA',
-                      'A candid photograph of a 20-year-old blonde woman sitting beside a cafe window. '
-                      'She looks up from her coffee as a friend speaks. Soft daylight from the side reveals '
-                      'fine skin texture and a few faint freckles across her nose. Loose strands of hair, '
-                      'minimal makeup, natural color, eye-level framing.',
-                      '緑の欄で人物・場面・光を指定し、RealSkinノードの強度で肌の表現を調整できます。')
-    write(reference_workflow(base), 'MOSS_03_CharRef_1152x1536_25.json')
-    write(reference_workflow(base,edit=True), 'MOSS_04_EditHQ_v5_25.json')
-
-
-if __name__=='__main__':main()
+if __name__ == '__main__':
+    pin = json.loads((ROOT / 'studio/models.json').read_text(encoding='utf-8'))['upscale_2x']
+    write_marciana('MOSS_10_Fast2x_marciana_marine_study.json', 864, 1152, 'Fast', pin)
+    write_marciana('MOSS_08_Quality2x_marciana_marine_study.json', 1152, 1536, 'Quality', pin)

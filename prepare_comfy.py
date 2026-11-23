@@ -1,16 +1,11 @@
 """Download the requested weights and install the ready-to-use workflow."""
 import argparse
-import getpass
 import json
-import os
 from pathlib import Path
 import shutil
 import struct
-import sys
 
 from huggingface_hub import HfApi, hf_hub_download
-from huggingface_hub.errors import HfHubHTTPError
-from characters import CHARACTERS
 
 KIT = Path(__file__).resolve().parent
 
@@ -30,61 +25,44 @@ def valid_weights(path):
         return False
 
 
-def download_lora(models, pins):
-    destination = models / "loras" / pins["lora_file"]
-    if valid_weights(destination):
-        print(f"LoRA: {destination.name} is complete.")
-        return
-    token = os.environ.get("HF_TOKEN") or None
-    try:
-        path = hf_hub_download(
-            pins["lora_id"], pins["lora_file"],
-            local_dir=destination.parent, token=token,
-        )
-    except HfHubHTTPError as error:
-        if error.response.status_code not in (401, 403, 404):
-            raise
-        if token or not sys.stdin.isatty():
-            raise SystemExit(
-                f"LoRA access failed. Set HF_TOKEN with read access to {pins['lora_id']}, "
-                f"or upload the saved LoRA to {destination}. The token is not printed."
-            ) from None
-        print(f"LoRA repository requires access: {pins['lora_id']}")
-        token = getpass.getpass("Hugging Face read token (hidden, not saved): ").strip()
-        if not token:
-            raise SystemExit(f"Upload the saved LoRA to {destination}, then run start.sh again.")
-        try:
-            path = hf_hub_download(
-                pins["lora_id"], pins["lora_file"],
-                local_dir=destination.parent, token=token,
-            )
-        except HfHubHTTPError:
-            raise SystemExit(
-                f"LoRA access failed. Check token access to {pins['lora_id']}, "
-                f"or upload the saved file to {destination}."
-            ) from None
-    if not valid_weights(Path(path)):
-        raise SystemExit(f"LoRA download is incomplete: {path}")
+RETIRED_WORKFLOWS = (
+    'moss_marian_queen2.json',
+    'moss_marian_queen2_1152x1536_25.json',
+    'moss_scarlet_goddeath_1152x1536_25.json',
+    'MOSS_01_scarlet_goddeath_1152x1536_25.json',
+    'MOSS_02_marian_queen2_1152x1536_25.json',
+    'MOSS_03_CharRef_1152x1536_25.json',
+    'MOSS_04_EditHQ_v5_25.json',
+    'MOSS_05_CottonMoss_1152x1536_12.json',
+    'MOSS_06_CottonMoss_marian_queen2_1152x1536_12.json',
+    'MOSS_07_CottonMoss_scarlet_goddeath_1152x1536_12.json',
+    'MOSS_08_CottonMoss_marciana_marine_study_1152x1536_12.json',
+    'MOSS_09_CottonMoss_realskin_1152x1536_12.json',
+)
 
 
-def install_workflow(comfy, pins):
-    destination = comfy / "user" / "default" / "workflows" / pins["workflow_file"]
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    if not destination.exists():
-        shutil.copyfile(KIT / "workflows" / pins["workflow_file"], destination)
-    print(f"Workflow: {destination} (existing edits are preserved)")
-
-
-def prepare_image_tools(runtime):
-    # Native workflows cannot trigger the retired Studio's on-demand downloader.
-    # Download their pinned models before handing the browser to ComfyUI.
-    from studio.assets import Downloads
-    downloads = Downloads(runtime)
-    for name, label in [('charref', 'キャラ参照モデル'), ('sft', '画像編集のSFTモデル'), ('edit', '画像編集アダプター v5')]:
-        print(f'MOSS_STAGE={label}を準備しています', flush=True)
-        downloads.ensure(name)
-    for workflow in sorted((KIT / 'workflows').glob('MOSS_0*.json')):
-        install_workflow(Path(runtime) / 'ComfyUI', {'workflow_file': workflow.name})
+def install_workflows(comfy):
+    profile = comfy / 'user/default'
+    folder = profile / 'workflows'
+    folder.mkdir(parents=True, exist_ok=True)
+    for source in sorted((KIT / 'workflows').glob('*.json')):
+        destination = folder / source.name
+        if not destination.exists():
+            temporary = folder / ('.' + source.name + '.installing')
+            shutil.copyfile(source, temporary)
+            temporary.replace(destination)
+    archive = profile / 'moss-workflow-archive'
+    for name in RETIRED_WORKFLOWS:
+        previous = folder / name
+        if not previous.is_file():
+            continue
+        archive.mkdir(exist_ok=True)
+        target = archive / name
+        index = 1
+        while target.exists():
+            target = archive / f'{previous.stem}-{index}.json'
+            index += 1
+        previous.rename(target)
 
 
 def prepare_generation_model(runtime):
@@ -92,8 +70,8 @@ def prepare_generation_model(runtime):
     downloads = Downloads(runtime)
     for name, label in [('cottonmoss', 'CottonMoss Turbo INT8'),
                         ('marciana_marine_study', 'マルチャーナの最終版LoRA'),
-                        ('realskin', 'RealSkin v1.0 スタイルLoRA')]:
-        print(f'MOSS_STAGE=Hugging Faceから{label}を準備しています', flush=True)
+                        ('upscale_2x', '2倍アップスケールモデル')]:
+        print(f'MOSS_STAGE={label}を準備しています', flush=True)
         downloads.ensure(name)
 
 
@@ -106,40 +84,29 @@ def main():
     models = comfy / "models"
     models.mkdir(parents=True, exist_ok=True)
 
-    # Resolve private-file access before downloading the much larger public models.
-    download_lora(models, pins)
-    for character in CHARACTERS.values():
-        if character['file'] != pins['lora_file']:
-            download_lora(models, {'lora_id': character['repo'], 'lora_file': character['file']})
     prepare_generation_model(args.runtime)
-    info = HfApi(token=False).model_info(
-        pins["model_id"], revision=pins["model_revision"], files_metadata=True,
-    )
-    sizes = {f.rfilename: f.size for f in info.siblings}
     missing = [name for name in pins["model_files"] if not valid_weights(models / name)]
-    needed = sum(sizes[name] for name in missing) + 2 * 2**30
-    free = shutil.disk_usage(models).free
-    if missing and free < needed:
-        raise SystemExit(
-            f"Need {needed / 2**30:.1f} GiB free for pending downloads; "
-            f"have {free / 2**30:.1f} GiB."
+    if missing:
+        info = HfApi(token=False).model_info(
+            pins["model_id"], revision=pins["model_revision"], files_metadata=True,
         )
-    for name in pins["model_files"]:
-        if name not in missing:
-            print(f"Already downloaded: {name}")
-            continue
+        sizes = {f.rfilename: f.size for f in info.siblings}
+        needed = sum(sizes[name] for name in missing) + 2 * 2**30
+        free = shutil.disk_usage(models).free
+        if free < needed:
+            raise SystemExit(
+                f"Need {needed / 2**30:.1f} GiB free for pending downloads; "
+                f"have {free / 2**30:.1f} GiB."
+            )
+    for name in missing:
         path = hf_hub_download(
             pins["model_id"], name, revision=pins["model_revision"],
             local_dir=models, token=False,
         )
         if not valid_weights(Path(path)):
             raise SystemExit(f"Model download is incomplete: {path}")
-    install_workflow(comfy, pins)
-    for character in CHARACTERS.values():
-        install_workflow(comfy, {'workflow_file': character['workflow']})
-    prepare_image_tools(args.runtime)
-    print("MOSS_STAGE=通常生成・キャラ参照・画像編集のワークフローを配置しました")
-    print("CottonMoss Turbo INT8 + character LoRAs + original MOSS workflows are ready.")
+    install_workflows(comfy)
+    print("MOSS_STAGE=マルチャーナの高速版・高精細版ワークフローを配置しました")
 
 
 if __name__ == "__main__":

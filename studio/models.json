@@ -26,6 +26,14 @@
     "size": 148721720,
     "sha256": "d74252d8c56862fd836babbd6f32a62905207d6bac3327e700a0a13eac2424f7"
   },
+  "upscale_2x": {
+    "repo": "Phips/2xNomosUni_compact_otf_medium",
+    "revision": "3241c877a6e09036f9e466c840822bb066f11c44",
+    "file": "2xNomosUni_compact_otf_medium.safetensors",
+    "destination": "upscale_models/2xNomosUni_compact_otf_medium.safetensors",
+    "size": 2406816,
+    "sha256": "4082ee58d31c565e5790984cede8f896873de30db15f4418caab6b7a411fd537"
+  },
   "hires": {
     "repo": "comfyanonymous/MOSS_image_MAX_ULTRA_hires_lora_test",
     "revision": "67841316197079670315d2dc1eaacac6afd4591a",

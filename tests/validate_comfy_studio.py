@@ -32,7 +32,7 @@ from studio.assets import PINS
 
 async def main():
     for name in ('comfy_extras.nodes_flux','comfy_extras.nodes_slg','comfy_extras.nodes_moss_image',
-                 'comfy_extras.nodes_images','comfy_extras.nodes_post_processing'):
+                 'comfy_extras.nodes_images','comfy_extras.nodes_post_processing','comfy_extras.nodes_upscale_model'):
         extension=await importlib.import_module(name).comfy_entrypoint()
         for cls in await extension.get_node_list():
             nodes.NODE_CLASS_MAPPINGS[cls.define_schema().node_id]=cls

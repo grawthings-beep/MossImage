@@ -38,7 +38,7 @@ echo 'MOSS_STAGE=画像生成の依存パッケージを準備しています'
 "$PY" -m pip install --constraint "$MOSS_HOME/comfy-cuda-constraints.txt" -r "$COMFY/requirements.txt" -r "$KIT/comfy-requirements.txt"
 "$PY" "$KIT/check_runtime.py"
 "$PY" "$KIT/check_comfy.py" --comfy "$COMFY"
-echo 'MOSS_STAGE=Baseモデル・テキストエンコーダー・VAE・キャラLoRAを取得しています'
+echo 'MOSS_STAGE=CottonMoss・マルチャーナLoRA・テキストエンコーダー・VAE・2倍モデルを準備しています'
 "$PY" "$KIT/prepare_comfy.py" --runtime "$MOSS_HOME"
 "$PY" -m pip freeze > "$MOSS_HOME/comfy-installed-packages.txt"
 echo 'Setup finished. start.sh will launch the ComfyUI login page.'
