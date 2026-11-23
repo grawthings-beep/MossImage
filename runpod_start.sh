@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Container startup: optional file browser plus generation, with no terminal session.
+# Container startup for generation or LoRA training, with a shared file browser.
 set -Eeuo pipefail
 umask 077
 KIT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,6 +11,10 @@ if command -v jupyter >/dev/null && ! python3 -c 'import socket; s=socket.create
     nohup jupyter lab --ip=0.0.0.0 --port=8888 --ServerApp.port_retries=0 \
         --ServerApp.allow_remote_access=True --ServerApp.root_dir=/workspace \
         --no-browser --allow-root > /workspace/jupyter-lab.log 2>&1 < /dev/null &
+fi
+if [[ "${1:-}" == "train" ]]; then
+    shift
+    exec python3 -u "$KIT/training/inbox.py" "$@"
 fi
 # Keep PID 1 separate so --stop can stop generation while leaving the Pod available
 # for a later LoRA training job. Never restart an intentionally stopped server.

@@ -65,5 +65,11 @@ if (!$active -or $active.StartTime.ToUniversalTime().Ticks -ne [long]$state.proc
 if ($text -match '100%') { throw 'Transfer already reached 100%; do not reuse this receive code.' }
 $name = $report.name
 $command = "bash /workspace/MossImage/train.sh receive $name --code $code --sha256 $($report.sha256)"
+$boot = (Get-Content -Raw -LiteralPath (Join-Path (Split-Path $PSScriptRoot -Parent) 'runpod-train-command.txt')).Trim()
+if (!$boot.EndsWith(" train'")) { throw 'Invalid training template command' }
+$boot = $boot.Substring(0, $boot.Length - 1) + " --receive $name $($report.sha256) $code'"
+$privateStartFile = Join-Path $directory "${name}_private_start.txt"
+[IO.File]::WriteAllText($privateStartFile, $boot + [Environment]::NewLine)
 [pscustomobject]@{state='waiting_for_receiver';name=$name;pid=$state.pid;code=$code;
-    images=$report.images;steps=$report.steps;command=$command;stdout=$state.stdout;stderr=$state.stderr} | ConvertTo-Json
+    images=$report.images;steps=$report.steps;command=$command;privateStartFile=$privateStartFile;
+    stdout=$state.stdout;stderr=$state.stderr} | ConvertTo-Json

@@ -20,6 +20,7 @@ sys.path.insert(0, str(TRAINING))
 from build_bundle import build
 from common import digest, read_json, read_bundle, validate_pairs, verify_final, write_json
 import runtime
+import inbox
 
 spec = importlib.util.spec_from_file_location("moss_training_launch", TRAINING / "launch.py")
 launch = importlib.util.module_from_spec(spec)
@@ -83,6 +84,44 @@ class BundleTests(unittest.TestCase):
         again = read_json(build(self.dataset, "test_character", "t0ken", self.base / "bundles"))
         self.assertEqual(self.report["sha256"], again["sha256"])
         self.install()
+
+    def test_inbox_waits_for_complete_upload_and_submits_only_once(self):
+        upload = Path(self.report["upload"])
+        self.assertEqual(digest(upload), self.report["sha256"])
+        folder = self.base / "upload"
+        folder.mkdir()
+        received = folder / upload.name
+        received.write_bytes(upload.read_bytes()[:20])
+        seen, sent = {}, {}
+        with mock.patch.object(inbox.subprocess, "run") as run:
+            inbox.scan(folder, self.base, seen, sent)
+            run.assert_not_called()
+            received.write_bytes(upload.read_bytes())
+            inbox.scan(folder, self.base, seen, sent)
+            inbox.scan(folder, self.base, seen, sent)
+            run.assert_called_once()
+            self.assertEqual(run.call_args.args[0][3:],
+                             ["start", self.job["name"], "--root", str(self.base), "--bundle",
+                              str(received), "--sha256", self.report["sha256"], "--no-follow"])
+
+    def test_boot_receive_stages_only_valid_data_and_reuses_verified_volume(self):
+        folder = self.base / "incoming"
+        folder.mkdir()
+        args = (folder, self.base, self.job["name"], self.report["sha256"], "0000-test-test-test-0")
+        received = folder / Path(self.report["upload"]).name
+        payload = b"partial"
+        def transfer(command, cwd, **kwargs):
+            (Path(cwd) / self.archive.name).write_bytes(payload)
+            return subprocess.CompletedProcess(command, 0)
+        with mock.patch.object(inbox, "receiver", return_value="runpodctl"), \
+             mock.patch.object(inbox.subprocess, "run", side_effect=transfer) as run:
+            inbox.receive(*args)
+            self.assertFalse(received.exists())
+            payload = self.archive.read_bytes()
+            inbox.receive(*args)
+            inbox.receive(*args)
+            self.assertEqual(run.call_count, 2)
+            self.assertEqual(digest(received), self.report["sha256"])
 
     def test_bundle_corruption_is_rejected_before_extraction(self):
         self.archive.write_bytes(self.archive.read_bytes() + b"corrupt")

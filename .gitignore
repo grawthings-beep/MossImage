@@ -14,3 +14,4 @@ training-bundles/
 *.tar.gz
 *_validation.json
 *_send_state.json
+*_private_start.txt

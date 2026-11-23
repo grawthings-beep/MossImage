@@ -4,11 +4,32 @@ import gzip
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
+import shutil
 import tarfile
 import tempfile
 
 from common import HERE, MAX_FILE, MAX_TOTAL, digest, read_bundle, read_json, recipe_checked, valid_name, validate_pairs, write_json
+
+
+def upload_copy(bundle, name, sha):
+    """Give Jupyter uploads a verifiable filename, without changing runpodctl's filename."""
+    inbox = bundle.parent / "LoRA-inbox"
+    inbox.mkdir(exist_ok=True)
+    target = inbox / f"moss_{name}.{sha}.tar.gz"
+    if target.exists():
+        if digest(target) != sha:
+            raise ValueError(f"Existing upload copy has the wrong checksum: {target}")
+        return target
+    try:
+        os.link(bundle, target)
+    except OSError:
+        with tempfile.TemporaryDirectory(dir=inbox) as tmp:
+            staged = Path(tmp) / target.name
+            shutil.copyfile(bundle, staged)
+            staged.replace(target)
+    return target
 
 
 def build(dataset, name, trigger, output, recipe=None):
@@ -49,7 +70,8 @@ def build(dataset, name, trigger, output, recipe=None):
                 raise ValueError("A different bundle already exists under this name; choose a new job name.")
         else:
             staged.rename(bundle)
-    report = {"name": name, "bundle": str(bundle), "sha256": sha, "bytes": bundle.stat().st_size,
+    report = {"name": name, "bundle": str(bundle), "upload": str(upload_copy(bundle, name, sha)),
+              "sha256": sha, "bytes": bundle.stat().st_size,
               "images": count, "steps": recipe["total_steps"], "trigger": trigger}
     report_path = output / f"moss_{name}_validation.json"
     write_json(report_path, report)
