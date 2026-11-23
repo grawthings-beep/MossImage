@@ -40,6 +40,12 @@ RETIRED_WORKFLOWS = (
     'MOSS_09_CottonMoss_realskin_1152x1536_12.json',
     'MOSS_08_Quality2x_marciana_marine_study.json',
     'MOSS_10_Fast2x_marciana_marine_study.json',
+    'MOSS_08_Quality2x_marciana_marine_study_original_33.json',
+    'MOSS_08_Quality2x_marciana_marine_study_30_v1.json',
+    'MOSS_08_Quality2x_marian_last_affection2_3k.json',
+    'MOSS_10_Fast2x_marciana_marine_study_original_33.json',
+    'MOSS_10_Fast2x_marciana_marine_study_30_v1.json',
+    'MOSS_10_Fast2x_marian_last_affection2_3k.json',
 )
 
 
@@ -74,8 +80,7 @@ def prepare_generation_model(runtime):
                         ('sft', 'MOSS-Image SFT BF16'),
                         ('marciana_marine_study', 'マルチャーナの30枚版LoRA'),
                         ('marciana_marine_study_original', 'マルチャーナの元の33枚版LoRA'),
-                        ('marian_last_affection2_3k', 'マリアンのラストアフェクションLoRA'),
-                        ('upscale_2x', '2倍アップスケールモデル')]:
+                        ('marian_last_affection2_3k', 'マリアンのラストアフェクションLoRA')]:
         print(f'MOSS_STAGE={label}を準備しています', flush=True)
         downloads.ensure(name)
 

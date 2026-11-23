@@ -36,37 +36,38 @@ def model_metadata(pin):
             'url': f"https://huggingface.co/{pin['repo']}/resolve/{pin['revision']}/{pin['file']}"}
 
 
-def write_variant(data, filename, width, height, prefix, instructions, pin):
+def write_variant(data, filename, width, height, prefix, instructions):
     nodes = {n['id']: n for n in data['nodes']}
     nodes[6].update(title=f'生成サイズ：{width} × {height}', widgets_values=[width, height, 1])
     nodes[9].update(title='元画像を保存', pos=[1790, 375], size=[330, 460], widgets_values=[prefix + '/base'])
     nodes[15]['widgets_values'] = [
         f'{instructions}\n'
-        f'{width}×{height}・12 stepsで生成し、{width*2}×{height*2}の仕上げ版も保存します。\n'
-        '候補だけを作るときは「仕上げ版を保存」をミュート。細い線を戻すには「元画像を混ぜる割合」を上げます。']
-    loader = node(20, 'UpscaleModelLoader', '軽量2倍モデル', [2140, 380], [350, 65],
-                  outputs=[('UPSCALE_MODEL', 'UPSCALE_MODEL')], widgets=[pin['file']])
-    loader['properties']['models'] = [model_metadata(pin)]
+        f'{width}×{height}で生成し、latentを1.5倍に拡大。2段目で8 steps描き込み、'
+        f'{width*3//2}×{height*3//2}の仕上げ版を保存します。\n'
+        '顔が変わりすぎるときは2段目のdenoiseを下げます。元画像だけを試すときは「仕上げ版を保存」をミュート。']
     data['nodes'].extend([
-        loader,
-        node(19, 'ImageBlur', '拡大前の粒状感を抑える（半径0でオフ）', [2140, 90], [350, 115],
-             [('image', 'IMAGE')], [('IMAGE', 'IMAGE')], [1, 0.7]),
-        node(21, 'ImageUpscaleWithModel', '2倍に拡大', [2540, 230], [250, 85],
-             [('upscale_model', 'UPSCALE_MODEL'), ('image', 'IMAGE')], [('IMAGE', 'IMAGE')]),
-        node(22, 'ImageBlend', '元画像を混ぜる割合', [2860, 90], [290, 130],
-             [('image1', 'IMAGE'), ('image2', 'IMAGE')], [('IMAGE', 'IMAGE')], [0.25, 'normal']),
-        node(23, 'SaveImage', '仕上げ版を保存（2倍）', [3230, 75], [420, 520],
+        node(19, 'LatentUpscaleBy', '2段目：latent拡大', [1790, 210], [300, 110],
+             [('samples', 'LATENT')], [('LATENT', 'LATENT')], ['bislerp', 1.5]),
+        node(21, 'KSampler', '2段目：高解像度で描き込む', [2190, 80], [350, 485],
+             [('model', 'MODEL'), ('positive', 'CONDITIONING'), ('negative', 'CONDITIONING'),
+              ('latent_image', 'LATENT')], [('LATENT', 'LATENT')],
+             [43, 'fixed', 8, 1.0, 'er_sde', 'simple', 0.55]),
+        node(22, 'VAEDecode', '仕上げ版を画像に変換', [2640, 80], [250, 70],
+             [('samples', 'LATENT'), ('vae', 'VAE')], [('IMAGE', 'IMAGE')]),
+        node(23, 'SaveImage', '仕上げ版を保存', [2980, 80], [420, 520],
              [('images', 'IMAGE')], widgets=[prefix + '/final']),
     ])
-    connections = [(8, 0, 19, 0, 'IMAGE'), (20, 0, 21, 0, 'UPSCALE_MODEL'), (19, 0, 21, 1, 'IMAGE'),
-                   (21, 0, 22, 0, 'IMAGE'), (8, 0, 22, 1, 'IMAGE'), (22, 0, 23, 0, 'IMAGE')]
+    connections = [(7, 0, 19, 0, 'LATENT'), (11, 0, 21, 0, 'MODEL'),
+                   (4, 0, 21, 1, 'CONDITIONING'), (5, 0, 21, 2, 'CONDITIONING'),
+                   (19, 0, 21, 3, 'LATENT'), (21, 0, 22, 0, 'LATENT'),
+                   (3, 0, 22, 1, 'VAE'), (22, 0, 23, 0, 'IMAGE')]
     first = max(link[0] for link in data['links']) + 1
     for link_id, connection in enumerate(connections, first):
         data['links'].append([link_id, *connection])
     write(data, filename)
 
 
-def write_pair(slug, name, version, trigger, folder, lora, upscale, prompt=None):
+def write_pair(slug, name, version, trigger, folder, lora, prompt=None):
     template = json.loads(Path(__file__).with_name('marciana_base.json').read_text(encoding='utf-8'))
     nodes = {n['id']: n for n in template['nodes']}
     if prompt is not None:
@@ -75,19 +76,18 @@ def write_pair(slug, name, version, trigger, folder, lora, upscale, prompt=None)
     nodes[10]['properties']['models'] = [model_metadata(lora)]
     instructions = f'{name}。緑の欄で {trigger} を残してRun。'
     for number, mode, width, height in [('10', 'Fast', 864, 1152), ('08', 'Quality', 1152, 1536)]:
-        filename = f'MOSS_{number}_{mode}2x_{slug}.json'
-        write_variant(deepcopy(template), filename, width, height, f'MOSS/{folder}/{mode}', instructions, upscale)
+        filename = f'MOSS_{number}_{mode}_Hires_{slug}.json'
+        write_variant(deepcopy(template), filename, width, height, f'MOSS/{folder}/{mode}', instructions)
 
 
 if __name__ == '__main__':
     pins = json.loads((ROOT / 'studio/models.json').read_text(encoding='utf-8'))
-    upscale = pins['upscale_2x']
     write_pair('marciana_marine_study_30_v1', 'マルチャーナ：マリンスタディ', '30枚版 v1',
-               'm4rc14n4m4r1ne', 'Marciana', pins['marciana_marine_study'], upscale)
+               'm4rc14n4m4r1ne', 'Marciana', pins['marciana_marine_study'])
     write_pair('marciana_marine_study_original_33', 'マルチャーナ：マリンスタディ', '元の33枚版',
-               'm4rc14n4m4r1ne', 'Marciana/Original33', pins['marciana_marine_study_original'], upscale)
+               'm4rc14n4m4r1ne', 'Marciana/Original33', pins['marciana_marine_study_original'])
     write_pair('marian_last_affection2_3k', 'マリアン：ラストアフェクション', '3000ステップ',
-               'm4r14nl4st2', 'Marian/LastAffection', pins['marian_last_affection2_3k'], upscale,
+               'm4r14nl4st2', 'Marian/LastAffection', pins['marian_last_affection2_3k'],
                'masterpiece, best quality, highres, m4r14nl4st2, an anime illustration. '
                'A bride pauses on the stone steps of a chapel at dusk and smiles over her shoulder. '
                'She lifts the ruffled train of her white wedding dress with one gloved hand. '

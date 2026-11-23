@@ -1,12 +1,12 @@
 # MOSS-Image + LoRA on RunPod
 
-RunPodで **マリアン：ラストアフェクション** と **マルチャーナ：マリンスタディ**（元の33枚版・30枚版 v1）を生成するComfyUIキットです。各ワークフローにはキャラLoRAが設定されており、1回のRunで元画像と2倍仕上げ版を保存します。
+RunPodで **マリアン：ラストアフェクション** と **マルチャーナ：マリンスタディ**（元の33枚版・30枚版 v1）を生成するComfyUIキットです。各ワークフローにはキャラLoRAが設定されており、1回のRunで元画像と、高解像度でもう一度描き込んだ仕上げ版を保存します。
 
 **毎回コマンドを入力せずに使う:** [RunPodテンプレートの自動起動設定](RUNPOD.md)を一度保存してください。以降はPod起動後に **Connect → 7860** を開くだけ。準備中も同じURLに状態を表示し、取得完了後に通常のComfyUIへ移ります。`MOSS_PASSWORD` を設定すれば、ログからパスワードを探す必要もありません。
 
 **操作はComfyUIのノードで行います。** 漫画スタジオと独自の画像生成画面は廃止しました。旧URLもComfyUIへ移動します。実行中のノード・ステップ進捗はComfyUI標準表示を使い、軽量な途中プレビューを起動時に有効にします。
 
-**MOSS_10 Fast2x** は864×1152で生成し、1728×2304に仕上げます。顔が小さい全身絵には **MOSS_08 Quality2x**（1152×1536 → 2304×3072）を使えます。[ワークフローと肌の調整](WORKFLOWS.md)
+**MOSS_10 Fast Hires** は864×1152で生成し、1296×1728に仕上げます。顔が小さい全身絵には **MOSS_08 Quality Hires**（1152×1536 → 1728×2304）を使えます。[ワークフローと描き込みの調整](WORKFLOWS.md)
 
 **LoRA学習**は学習専用テンプレートで起動できます。PCからの受信、またはJupyterLabでのファイル投入後、キャッシュ作成・学習・保存まで自動で進みます。[学習テンプレートの設定](TRAINING.md)
 
@@ -26,7 +26,7 @@ PodのTerminalで、この1行を実行します。
 cd /workspace && git clone https://github.com/grawthings-beep/MossImage.git && cd MossImage && bash background.sh
 ```
 
-Hugging FaceでCottonMossの読み取り権限・ファイル名・サイズ・SHA256を確認 → CUDA実演算の確認 → MOSS対応ComfyUIの固定版を取得 → 依存の確認 → LoRAとモデルの取得 → ログイン付きComfyUI起動、の順で進みます。HF_TOKEN未設定・未展開・認証拒否・配信エラーは準備画面に表示します。初回はCottonMoss Turbo INT8、MOSS-Image Base BF16、MOSS-Image SFT BF16、キャラLoRA 3種、Qwenテキストエンコーダー、small VAE、2倍モデルをダウンロードします。
+Hugging FaceでCottonMossの読み取り権限・ファイル名・サイズ・SHA256を確認 → CUDA実演算の確認 → MOSS対応ComfyUIの固定版を取得 → 依存の確認 → LoRAとモデルの取得 → ログイン付きComfyUI起動、の順で進みます。HF_TOKEN未設定・未展開・認証拒否・配信エラーは準備画面に表示します。初回はCottonMoss Turbo INT8、MOSS-Image Base BF16、MOSS-Image SFT BF16、キャラLoRA 3種、Qwenテキストエンコーダー、small VAEをダウンロードします。
 
 この起動方法はバックグラウンドで動くため、iPhoneのSafariやターミナルを閉じてもセットアップ・生成が続きます。**HF_TOKENを設定済み**、またはLoRAを配置済みで使用してください。初回の進行とログイン情報を表示:
 
@@ -69,9 +69,9 @@ cd /workspace/MossImage && bash background.sh
 ## 3. 生成する
 
 1. **Connect → 7860** で通常のComfyUIを開く。
-2. **Workflows** で使いたいキャラの **MOSS_10 Fast2x** または **MOSS_08 Quality2x** を選ぶ。
+2. **Workflows** で使いたいキャラの **MOSS_10 Fast Hires** または **MOSS_08 Quality Hires** を選ぶ。
 3. 緑の欄でトリガー（マリアンは `m4r14nl4st2`、マルチャーナは `m4rc14n4m4r1ne`）を残し、プロンプトを変更する。
-4. **Run** を押す。元画像と2倍仕上げ版がそれぞれ **Save Image** に表示され、PNGが自動保存される。
+4. **Run** を押す。元画像と、高解像度でもう一度描き込んだ仕上げ版がそれぞれ **Save Image** に表示され、PNGが自動保存される。
 
 既存Podを更新すると、以前同梱していたワークフローは `ComfyUI/user/default/moss-workflow-archive/` に退避します。生成済みのPNGやLoRAはそのまま使えます。
 

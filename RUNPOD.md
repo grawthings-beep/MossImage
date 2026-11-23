@@ -24,8 +24,8 @@ bash -lc 'set -e; mkdir -p /workspace; if [ -d /workspace/MossImage/.git ]; then
 
 CottonMossは指定された [Hugging Faceのファイル](https://huggingface.co/uwgm/Moss/resolve/main/cottonmoss_baseTurboTestInt8.safetensors) をHF_TOKENで取得します。**CIVITAI_TOKENは不要で、Civitaiへは接続しません**。依存パッケージや大容量モデルを入れる前に、Hugging Face上の読み取り権限とファイルのサイズ・SHA256を確認します。HF_TOKEN未設定・未展開、認証拒否、ファイル未存在などは7860の準備画面に表示します。コンテナイメージや新しい環境変数の追加は不要です。
 
-- **Workflows** でマリアン3000ステップ版、マルチャーナの元の33枚版、30枚版 v1 が選べます。それぞれ **MOSS_10 Fast2x** と **MOSS_08 Quality2x** を用意しています。[キャラ・モデルの切り替えと仕上げ](WORKFLOWS.md)
-- 新規PodはCottonMoss Turbo INT8、MOSS-Image Base BF16、MOSS-Image SFT BF16を取得します。BF16の2ファイルが両方未取得の場合は、ダウンロードが合計約20 GB増えます。キャラLoRA 3種、Qwenテキストエンコーダー、small VAE、2倍モデルも自動で用意します。
+- **Workflows** でマリアン3000ステップ版、マルチャーナの元の33枚版、30枚版 v1 が選べます。それぞれ **MOSS_10 Fast Hires** と **MOSS_08 Quality Hires** を用意しています。[キャラ・モデルの切り替えと仕上げ](WORKFLOWS.md)
+- 新規PodはCottonMoss Turbo INT8、MOSS-Image Base BF16、MOSS-Image SFT BF16を取得します。BF16の2ファイルが両方未取得の場合は、ダウンロードが合計約20 GB増えます。キャラLoRA 3種、Qwenテキストエンコーダー、small VAEも自動で用意します。
 - 漫画スタジオ・独自の画像生成画面は廃止。旧 `/studio/`、`/studio/image` はComfyUIへ転送します。保存済みの画像とファイルは維持します。
 - ファイル: イメージにJupyterLabがあれば8888も自動起動します。新たに起動したJupyterのログイントークンは `MOSS_PASSWORD` と同じです。既存の8888サービスは停止・置き換えしません。
 

@@ -1,8 +1,8 @@
 {
-  "id": "1c9886b5-b644-546b-94dd-89acc8f5a5cf",
+  "id": "bbe127f7-0fe3-59bb-a3fa-b37a758b9553",
   "revision": 0,
   "last_node_id": 23,
-  "last_link_id": 17,
+  "last_link_id": 19,
   "nodes": [
     {
       "id": 1,
@@ -102,7 +102,8 @@
           "name": "VAE",
           "type": "VAE",
           "links": [
-            10
+            10,
+            18
           ],
           "slot_index": 0
         }
@@ -148,7 +149,8 @@
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            6
+            6,
+            14
           ],
           "slot_index": 0
         }
@@ -157,7 +159,7 @@
         "Node name for S&R": "CLIPTextEncode"
       },
       "widgets_values": [
-        "masterpiece, best quality, highres, absurdres, m4rc14n4m4r1ne, an anime illustration of an adult lifeguard standing beneath a wooden pier. She turns toward the viewer, one hand shading her eyes at the brim of a translucent pink visor. A silver star earring catches the light. She wears a glossy red one-piece swimsuit with a white cross. Sunlight reflected from the sea ripples across the pier posts. Waist-up portrait."
+        "masterpiece, best quality, highres, m4r14nl4st2, an anime illustration. A bride pauses on the stone steps of a chapel at dusk and smiles over her shoulder. She lifts the ruffled train of her white wedding dress with one gloved hand. The breeze draws her translucent veil to one side, revealing her lavender hair ribbon. Her blue pendant catches the last light. Full-length three-quarter view."
       ],
       "color": "#232",
       "bgcolor": "#353"
@@ -189,7 +191,8 @@
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            7
+            7,
+            15
           ],
           "slot_index": 0
         }
@@ -215,7 +218,7 @@
       "flags": {},
       "order": 3,
       "mode": 0,
-      "title": "生成サイズ：864 × 1152",
+      "title": "生成サイズ：1152 × 1536",
       "inputs": [],
       "outputs": [
         {
@@ -231,8 +234,8 @@
         "Node name for S&R": "EmptyFlux2LatentImage"
       },
       "widgets_values": [
-        864,
         1152,
+        1536,
         1
       ]
     },
@@ -278,7 +281,8 @@
           "name": "LATENT",
           "type": "LATENT",
           "links": [
-            9
+            9,
+            12
           ],
           "slot_index": 0
         }
@@ -328,9 +332,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            11,
-            12,
-            16
+            11
           ],
           "slot_index": 0
         }
@@ -367,7 +369,7 @@
         "Node name for S&R": "SaveImage"
       },
       "widgets_values": [
-        "MOSS/Marciana/Fast/base"
+        "MOSS/Marian/LastAffection/Quality/base"
       ]
     },
     {
@@ -384,7 +386,7 @@
       "flags": {},
       "order": 4,
       "mode": 0,
-      "title": "マルチャーナ：マリンスタディ LoRA（30枚版 v1）",
+      "title": "マリアン：ラストアフェクション LoRA（3000ステップ）",
       "inputs": [
         {
           "name": "model",
@@ -406,14 +408,14 @@
         "Node name for S&R": "LoraLoaderModelOnly",
         "models": [
           {
-            "name": "mossimage_lora_marciana_marine_study_30_v1.safetensors",
+            "name": "mossimage_lora_marian_last_affection2_3k.safetensors",
             "directory": "loras",
-            "url": "https://huggingface.co/uwgm/Moss/resolve/main/mossimage_lora_marciana_marine_study_30_v1.safetensors"
+            "url": "https://huggingface.co/uwgm/Moss/resolve/main/mossimage_lora_marian_last_affection2_3k.safetensors"
           }
         ]
       },
       "widgets_values": [
-        "mossimage_lora_marciana_marine_study_30_v1.safetensors",
+        "mossimage_lora_marian_last_affection2_3k.safetensors",
         1.0
       ]
     },
@@ -444,7 +446,8 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            3
+            3,
+            13
           ],
           "slot_index": 0
         }
@@ -480,162 +483,90 @@
         "Node name for S&R": "Note"
       },
       "widgets_values": [
-        "マルチャーナ：マリンスタディ。緑の欄で m4rc14n4m4r1ne を残してRun。\n864×1152・12 stepsで生成し、1728×2304の仕上げ版も保存します。\n候補だけを作るときは「仕上げ版を保存」をミュート。細い線を戻すには「元画像を混ぜる割合」を上げます。"
-      ]
-    },
-    {
-      "id": 20,
-      "type": "UpscaleModelLoader",
-      "title": "軽量2倍モデル",
-      "pos": [
-        2140,
-        380
-      ],
-      "size": [
-        350,
-        65
-      ],
-      "flags": {},
-      "order": 19,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "UPSCALE_MODEL",
-          "type": "UPSCALE_MODEL",
-          "links": [
-            13
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "UpscaleModelLoader",
-        "models": [
-          {
-            "name": "2xNomosUni_compact_otf_medium.safetensors",
-            "directory": "upscale_models",
-            "url": "https://huggingface.co/Phips/2xNomosUni_compact_otf_medium/resolve/3241c877a6e09036f9e466c840822bb066f11c44/2xNomosUni_compact_otf_medium.safetensors"
-          }
-        ]
-      },
-      "widgets_values": [
-        "2xNomosUni_compact_otf_medium.safetensors"
+        "マリアン：ラストアフェクション。緑の欄で m4r14nl4st2 を残してRun。\n1152×1536で生成し、latentを1.5倍に拡大。2段目で8 steps描き込み、1728×2304の仕上げ版を保存します。\n顔が変わりすぎるときは2段目のdenoiseを下げます。元画像だけを試すときは「仕上げ版を保存」をミュート。"
       ]
     },
     {
       "id": 19,
-      "type": "ImageBlur",
-      "title": "拡大前の粒状感を抑える（半径0でオフ）",
+      "type": "LatentUpscaleBy",
+      "title": "2段目：latent拡大",
       "pos": [
-        2140,
-        90
+        1790,
+        210
       ],
       "size": [
-        350,
-        115
+        300,
+        110
       ],
       "flags": {},
       "order": 18,
       "mode": 0,
       "inputs": [
         {
-          "name": "image",
-          "type": "IMAGE",
+          "name": "samples",
+          "type": "LATENT",
           "link": 12
         }
       ],
       "outputs": [
         {
-          "name": "IMAGE",
-          "type": "IMAGE",
+          "name": "LATENT",
+          "type": "LATENT",
           "links": [
-            14
+            16
           ],
           "slot_index": 0
         }
       ],
       "properties": {
-        "Node name for S&R": "ImageBlur"
+        "Node name for S&R": "LatentUpscaleBy"
       },
       "widgets_values": [
-        1,
-        0.7
+        "bislerp",
+        1.5
       ]
     },
     {
       "id": 21,
-      "type": "ImageUpscaleWithModel",
-      "title": "2倍に拡大",
+      "type": "KSampler",
+      "title": "2段目：高解像度で描き込む",
       "pos": [
-        2540,
-        230
+        2190,
+        80
       ],
       "size": [
-        250,
-        85
+        350,
+        485
       ],
       "flags": {},
       "order": 20,
       "mode": 0,
       "inputs": [
         {
-          "name": "upscale_model",
-          "type": "UPSCALE_MODEL",
+          "name": "model",
+          "type": "MODEL",
           "link": 13
         },
         {
-          "name": "image",
-          "type": "IMAGE",
+          "name": "positive",
+          "type": "CONDITIONING",
           "link": 14
-        }
-      ],
-      "outputs": [
+        },
         {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            15
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "ImageUpscaleWithModel"
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 22,
-      "type": "ImageBlend",
-      "title": "元画像を混ぜる割合",
-      "pos": [
-        2860,
-        90
-      ],
-      "size": [
-        290,
-        130
-      ],
-      "flags": {},
-      "order": 21,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image1",
-          "type": "IMAGE",
+          "name": "negative",
+          "type": "CONDITIONING",
           "link": 15
         },
         {
-          "name": "image2",
-          "type": "IMAGE",
+          "name": "latent_image",
+          "type": "LATENT",
           "link": 16
         }
       ],
       "outputs": [
         {
-          "name": "IMAGE",
-          "type": "IMAGE",
+          "name": "LATENT",
+          "type": "LATENT",
           "links": [
             17
           ],
@@ -643,20 +574,67 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "ImageBlend"
+        "Node name for S&R": "KSampler"
       },
       "widgets_values": [
-        0.25,
-        "normal"
+        43,
+        "fixed",
+        8,
+        1.0,
+        "er_sde",
+        "simple",
+        0.55
       ]
+    },
+    {
+      "id": 22,
+      "type": "VAEDecode",
+      "title": "仕上げ版を画像に変換",
+      "pos": [
+        2640,
+        80
+      ],
+      "size": [
+        250,
+        70
+      ],
+      "flags": {},
+      "order": 21,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 17
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 18
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            19
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": []
     },
     {
       "id": 23,
       "type": "SaveImage",
-      "title": "仕上げ版を保存（2倍）",
+      "title": "仕上げ版を保存",
       "pos": [
-        3230,
-        75
+        2980,
+        80
       ],
       "size": [
         420,
@@ -669,7 +647,7 @@
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 17
+          "link": 19
         }
       ],
       "outputs": [],
@@ -677,7 +655,7 @@
         "Node name for S&R": "SaveImage"
       },
       "widgets_values": [
-        "MOSS/Marciana/Fast/final"
+        "MOSS/Marian/LastAffection/Quality/final"
       ]
     }
   ],
@@ -772,46 +750,62 @@
     ],
     [
       12,
-      8,
+      7,
       0,
       19,
       0,
-      "IMAGE"
+      "LATENT"
     ],
     [
       13,
-      20,
+      11,
       0,
       21,
       0,
-      "UPSCALE_MODEL"
+      "MODEL"
     ],
     [
       14,
-      19,
+      4,
       0,
       21,
       1,
-      "IMAGE"
+      "CONDITIONING"
     ],
     [
       15,
+      5,
+      0,
+      21,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      16,
+      19,
+      0,
+      21,
+      3,
+      "LATENT"
+    ],
+    [
+      17,
       21,
       0,
       22,
       0,
-      "IMAGE"
+      "LATENT"
     ],
     [
-      16,
-      8,
+      18,
+      3,
       0,
       22,
       1,
-      "IMAGE"
+      "VAE"
     ],
     [
-      17,
+      19,
       22,
       0,
       23,

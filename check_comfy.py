@@ -21,8 +21,7 @@ def main():
     assert hasattr(CLIPType, "MOSS_IMAGE"), "ComfyUI has no native MOSS support."
     assert "moss_image" in nodes.CLIPLoader.INPUT_TYPES()["required"]["type"][0]
 
-    for module_name in ("comfy_extras.nodes_flux", "comfy_extras.nodes_slg",
-                        "comfy_extras.nodes_post_processing", "comfy_extras.nodes_upscale_model"):
+    for module_name in ("comfy_extras.nodes_flux", "comfy_extras.nodes_slg"):
         module = importlib.import_module(module_name)
         extension = asyncio.run(module.comfy_entrypoint())
         for node in asyncio.run(extension.get_node_list()):

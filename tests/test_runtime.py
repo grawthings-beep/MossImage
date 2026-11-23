@@ -21,7 +21,7 @@ class FileTests(unittest.TestCase):
             prepare_generation_model(Path(directory))
             self.assertEqual([call.args[0] for call in ensure.call_args_list],
                              ['cottonmoss', 'sft', 'marciana_marine_study', 'marciana_marine_study_original',
-                              'marian_last_affection2_3k', 'upscale_2x'])
+                              'marian_last_affection2_3k'])
             pins = Path(__file__).resolve().parents[1] / 'comfy-revisions.json'
             self.assertIn('diffusion_models/moss_image_base_bf16.safetensors',
                           json.loads(pins.read_text(encoding='utf-8'))['model_files'])

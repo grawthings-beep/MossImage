@@ -67,9 +67,9 @@ class BootTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
 
-    def test_character_workflows_generate_once_and_save_both_resolutions(self):
+    def test_character_workflows_refine_the_first_latent_and_save_both_passes(self):
         root = Path(__file__).resolve().parents[1]
-        variants = [('08_Quality2x', [1152, 1536, 1], 'Quality'), ('10_Fast2x', [864, 1152, 1], 'Fast')]
+        variants = [('08_Quality_Hires', [1152, 1536, 1], 'Quality'), ('10_Fast_Hires', [864, 1152, 1], 'Fast')]
         characters = [
             ('marciana_marine_study_30_v1', 'marciana_marine_study', 'm4rc14n4m4r1ne', 'Marciana'),
             ('marciana_marine_study_original_33', 'marciana_marine_study_original', 'm4rc14n4m4r1ne', 'Marciana/Original33'),
@@ -92,17 +92,20 @@ class BootTests(unittest.TestCase):
                     'directory': 'loras', 'name': lora['file'],
                     'url': f"https://huggingface.co/{lora['repo']}/resolve/{lora['revision']}/{lora['file']}",
                 }])
-                self.assertEqual(nodes[20]['widgets_values'], [PINS['upscale_2x']['file']])
                 self.assertIn(trigger, nodes[4]['widgets_values'][0])
                 self.assertIn(trigger, nodes[15]['widgets_values'][0])
                 self.assertEqual(nodes[6]['widgets_values'], size)
                 self.assertEqual(nodes[7]['widgets_values'][2:6], [12, 3.0, 'er_sde', 'simple'])
-                self.assertEqual(sum(n['type'] == 'KSampler' for n in nodes.values()), 1)
-                self.assertEqual(nodes[19]['widgets_values'], [1, 0.7])
-                self.assertEqual(nodes[22]['widgets_values'], [0.25, 'normal'])
+                self.assertEqual(sum(n['type'] == 'KSampler' for n in nodes.values()), 2)
+                self.assertEqual(nodes[19]['type'], 'LatentUpscaleBy')
+                self.assertEqual(nodes[19]['widgets_values'], ['bislerp', 1.5])
+                self.assertEqual(nodes[21]['type'], 'KSampler')
+                self.assertEqual(nodes[21]['widgets_values'][2:], [8, 1.0, 'er_sde', 'simple', 0.55])
+                self.assertEqual(nodes[22]['type'], 'VAEDecode')
                 self.assertEqual(nodes[9]['widgets_values'], [prefix + '/base'])
                 self.assertEqual(nodes[23]['widgets_values'], [prefix + '/final'])
-                expected = {(8,0,9,0), (8,0,19,0), (20,0,21,0), (19,0,21,1),
-                            (21,0,22,0), (8,0,22,1), (22,0,23,0)}
+                expected = {(7,0,8,0), (3,0,8,1), (8,0,9,0), (7,0,19,0),
+                            (11,0,21,0), (4,0,21,1), (5,0,21,2), (19,0,21,3),
+                            (21,0,22,0), (3,0,22,1), (22,0,23,0)}
                 self.assertEqual({tuple(link[1:5]) for link in data['links']
-                                  if link[3] in (9, 19, 21, 22, 23)}, expected)
+                                  if link[3] in (8, 9, 19, 21, 22, 23)}, expected)
