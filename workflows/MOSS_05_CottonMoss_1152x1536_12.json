@@ -431,7 +431,7 @@
         "Node name for S&R": "Note"
       },
       "widgets_values": [
-        "CottonMoss base_turbo_test_int8：1152×1536、12 steps、CFG 3、er_sde / simple。\n緑のテキスト欄を変更してRun。品質タグは先頭に置きます。\nキャラLoRAなしの通常生成。マリアンはMOSS_06、紅蓮はMOSS_07を開いてください。"
+        "CottonMoss base_turbo_test_int8：1152×1536、12 steps、CFG 3、er_sde / simple。\n緑のテキスト欄を変更してRun。品質タグは先頭に置きます。\nマリアンは06、紅蓮は07、マルチャーナは08、実写肌のRealSkinは09を開いてください。"
       ]
     }
   ],

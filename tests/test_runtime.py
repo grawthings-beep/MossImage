@@ -12,7 +12,8 @@ from aiohttp.test_utils import TestClient, TestServer
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from launch import credentials
 from launch_comfy import proxy_app
-from prepare_comfy import install_workflow, valid_weights, prepare_image_tools
+from prepare_comfy import install_workflow, valid_weights, prepare_image_tools, prepare_generation_model
+from studio.assets import PINS
 
 
 class FileTests(unittest.TestCase):
@@ -20,10 +21,19 @@ class FileTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             with patch('studio.assets.Downloads.ensure') as ensure:
+                prepare_generation_model(root)
                 prepare_image_tools(root)
-                self.assertEqual([call.args[0] for call in ensure.call_args_list], ['charref','sft','edit'])
+                self.assertEqual([call.args[0] for call in ensure.call_args_list],
+                                 ['cottonmoss', 'marciana_marine_study', 'realskin', 'charref', 'sft', 'edit'])
                 files = sorted((root/'ComfyUI/user/default/workflows').glob('MOSS_0*.json'))
-                self.assertEqual(len(files), 7)
+                self.assertEqual(len(files), 9)
+                for path, preset in zip(files[-2:], ['marciana_marine_study', 'realskin']):
+                    nodes = {n['id']: n for n in json.loads(path.read_text(encoding='utf-8'))['nodes']}
+                    self.assertEqual(nodes[10]['widgets_values'], [PINS[preset]['file'], 1.0])
+                    self.assertEqual(nodes[1]['widgets_values'][0], PINS['cottonmoss']['file'])
+                    self.assertEqual(nodes[7]['widgets_values'][2:6], [12, 3.0, 'er_sde', 'simple'])
+                    self.assertEqual(nodes[6]['widgets_values'], [1152, 1536, 1])
+                    self.assertEqual('m4rc14n4m4r1ne' in nodes[4]['widgets_values'][0], preset == 'marciana_marine_study')
                 files[-1].write_text('{"user_edit": true}')
                 prepare_image_tools(root)
                 self.assertEqual(json.loads(files[-1].read_text()), {'user_edit': True})

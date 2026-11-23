@@ -79,7 +79,7 @@ def reference_workflow(base, edit=False):
     return data
 
 
-def cotton_workflow(base, character=None):
+def cotton_workflow(base, character=None, usage=None):
     data = copy.deepcopy(base)
     nodes = {n['id']: n for n in data['nodes']}
     nodes[1]['title'] = 'CottonMoss Turbo INT8'
@@ -106,10 +106,24 @@ def cotton_workflow(base, character=None):
     nodes[15] = node(15, 'Note', 'CottonMossの使い方', [30,730], [740,180], widgets=[
         'CottonMoss base_turbo_test_int8：1152×1536、12 steps、CFG 3、er_sde / simple。\n'
         '緑のテキスト欄を変更してRun。品質タグは先頭に置きます。\n'
-        + ('キャラLoRAは強度1.0から開始。顔の再現や最適強度は実画像で確認してください。' if character else
-           'キャラLoRAなしの通常生成。マリアンはMOSS_06、紅蓮はMOSS_07を開いてください。')])
+        + (usage or ('キャラLoRAは強度1.0から開始。顔の再現や最適強度は実画像で確認してください。' if character else
+                     'マリアンは06、紅蓮は07、マルチャーナは08、実写肌のRealSkinは09を開いてください。'))])
     data['nodes'] = list(nodes.values())
     return data
+
+
+def write_cotton_lora(base, pins, preset, number, title, prompt, usage):
+    data = copy.deepcopy(base)
+    nodes = {n['id']: n for n in data['nodes']}
+    pin = pins[preset]
+    loader = nodes[10]
+    loader['title'] = title
+    loader['widgets_values'] = [pin['file'], 1.0]
+    loader['properties']['models'] = [{'name': pin['file'], 'directory': 'loras',
+                                       'url': f"https://huggingface.co/{pin['repo']}/resolve/{pin['revision']}/{pin['file']}"}]
+    nodes[4]['title'] = 'プロンプト（人物・場面・光）'
+    nodes[4]['widgets_values'] = [prompt]
+    write(cotton_workflow(data, preset, usage), f'MOSS_{number:02}_CottonMoss_{preset}_1152x1536_12.json')
 
 
 def main():
@@ -124,6 +138,19 @@ def main():
         cotton_number = 7 if number == 1 else 6
         write(cotton_workflow(data, name), f'MOSS_0{cotton_number}_CottonMoss_{name}_1152x1536_12.json')
     write(cotton_workflow(base), 'MOSS_05_CottonMoss_1152x1536_12.json')
+    pins = json.loads((ROOT / 'studio/models.json').read_text(encoding='utf-8'))
+    write_cotton_lora(base, pins, 'marciana_marine_study', 8, 'マルチャーナ：マリンスタディ LoRA',
+                      'm4rc14n4m4r1ne, an anime illustration of an adult lifeguard standing beneath a wooden pier. '
+                      'She turns toward the viewer, one hand shading her eyes at the brim of a translucent pink visor. '
+                      'A silver star earring catches the light. She wears a glossy red one-piece swimsuit with a white cross. '
+                      'Sunlight reflected from the sea ripples across the pier posts. Waist-up portrait.',
+                      'トリガー m4rc14n4m4r1ne を残して、衣装・ポーズ・背景を変更できます。')
+    write_cotton_lora(base, pins, 'realskin', 9, 'RealSkin v1.0 スタイルLoRA',
+                      'A candid photograph of a 20-year-old blonde woman sitting beside a cafe window. '
+                      'She looks up from her coffee as a friend speaks. Soft daylight from the side reveals '
+                      'fine skin texture and a few faint freckles across her nose. Loose strands of hair, '
+                      'minimal makeup, natural color, eye-level framing.',
+                      '緑の欄で人物・場面・光を指定し、RealSkinノードの強度で肌の表現を調整できます。')
     write(reference_workflow(base), 'MOSS_03_CharRef_1152x1536_25.json')
     write(reference_workflow(base,edit=True), 'MOSS_04_EditHQ_v5_25.json')
 

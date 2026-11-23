@@ -89,8 +89,12 @@ def prepare_image_tools(runtime):
 
 def prepare_generation_model(runtime):
     from studio.assets import Downloads
-    print('MOSS_STAGE=Hugging FaceからCottonMoss Turbo INT8を準備しています', flush=True)
-    Downloads(runtime).ensure('cottonmoss')
+    downloads = Downloads(runtime)
+    for name, label in [('cottonmoss', 'CottonMoss Turbo INT8'),
+                        ('marciana_marine_study', 'マルチャーナの最終版LoRA'),
+                        ('realskin', 'RealSkin v1.0 スタイルLoRA')]:
+        print(f'MOSS_STAGE=Hugging Faceから{label}を準備しています', flush=True)
+        downloads.ensure(name)
 
 
 def main():

@@ -24,7 +24,7 @@ bash -lc 'set -e; mkdir -p /workspace; if [ -d /workspace/MossImage/.git ]; then
 
 CottonMossは指定された [Hugging Faceのファイル](https://huggingface.co/uwgm/Moss/resolve/main/cottonmoss_baseTurboTestInt8.safetensors) をHF_TOKENで取得します。**CIVITAI_TOKENは不要で、Civitaiへは接続しません**。依存パッケージや大容量モデルを入れる前に、Hugging Face上の読み取り権限とファイルのサイズ・SHA256を確認します。HF_TOKEN未設定・未展開、認証拒否、ファイル未存在などは7860の準備画面に表示します。コンテナイメージや新しい環境変数の追加は不要です。
 
-- ComfyUIの **Workflows** に `MOSS_01`～`MOSS_07` を配置します。通常生成は **05 CottonMoss・06 マリアン・07 紅蓮**を開きます。[各ワークフローの操作](WORKFLOWS.md)。
+- ComfyUIの **Workflows** に `MOSS_01`～`MOSS_09` を配置します。通常生成は **05 CottonMoss・06 マリアン・07 紅蓮・08 マルチャーナ・09 RealSkin** から選べます。[各ワークフローの操作](WORKFLOWS.md)。
 - CottonMossは **1152×1536・12ステップ・CFG 3**。初回に指定されたINT8モデルを約5.4GB取得し、SHA256を照合します。中断時は再試行すると途中から取得します。トークンはPod内でのみ使用し、ログやブラウザーには渡しません。
 - 従来の01・02とキャラ参照03は1152×1536・25ステップを保持。編集04は元画像の比率を保つ約1MP・25ステップです。
 - 漫画スタジオ・独自の画像生成画面は廃止。旧 `/studio/`、`/studio/image` はComfyUIへ転送します。保存済みの画像とファイルは維持します。
